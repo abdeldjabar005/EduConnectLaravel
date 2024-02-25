@@ -24,6 +24,8 @@ Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/verify', [OtpController::class, 'verify']);
 
+// ->middleware('verified') will use it later to check if the user is verified
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/{user}', [ProfileController::class, 'update']);
 

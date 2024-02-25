@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\LoginController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,3 +17,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+Route::post('/login', [LoginController::class, 'loginweb'])->name('login');
+
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login.get');
