@@ -24,7 +24,8 @@ class UserResource extends JsonResource
             'profile_picture' => $this->profile_picture,
             'bio' => $this->bio,
             'contact_information' => $this->contact_information,
-            'school_id' => $this->school_id,
+            'school' => new SchoolResource($this->school),
+            "classes" => SchoolClassResource::collection($this->classes),
         ];
     }
 }

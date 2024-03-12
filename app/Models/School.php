@@ -30,4 +30,11 @@ class School extends Model
     {
         return $this->hasMany(SchoolClass::class, 'school_id');
     }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+
 }

@@ -23,7 +23,6 @@ return new class extends Migration
             $table->string('profile_picture')->nullable();
             $table->text('bio')->nullable();
             $table->text('contact_information')->nullable();
-//            $table->foreignId('school_id')->nullable()->after('role')->constrained('schools');
             $table->rememberToken();
             $table->timestamps();
         });

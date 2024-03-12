@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StudentRequest;
 use App\Http\Resources\SchoolClassResource;
 use App\Http\Resources\StudentResource;
+use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Http\Request;
 
@@ -65,25 +66,25 @@ class StudentController extends Controller
     {
         //
     }
-    public function addStudentToClass(StudentRequest $request, string $studentId)
-    {
-        $student = Student::findOrFail($studentId);
-        $classId = $request->input('class_id');
 
-        if ($student->classes->contains($classId)) {
-            return response()->json(['error' => 'Student is already enrolled in this class'], 400);
-        }
+public function classesForStudent(string $studentId)
+{
+    $student = Student::findOrFail($studentId);
+    $user = request()->user();
 
-        $student->classes()->attach($classId);
-
-        return response()->json(['message' => 'Class added to student successfully']);
+    // Check if the user is a parent
+    if ($user->role != 'parent') {
+        return response()->json(['error' => 'Only parents can view the classes of a student'], 403);
     }
-    public function classesForStudent(string $studentId)
-    {
-        $student = Student::findOrFail($studentId);
-        $classes = $student->classes;
-        return SchoolClassResource::collection($classes);
+
+    // Check if the student is a child of the parent
+    if (!$user->students->contains($studentId)) {
+        return response()->json(['error' => 'The student is not a child of the parent'], 403);
     }
+
+    $classes = $student->classes;
+    return SchoolClassResource::collection($classes);
+}
     /**
      * Update the specified resource in storage.
      */
@@ -119,5 +120,17 @@ class StudentController extends Controller
         $student->delete();
 
         return response()->json(["response" => "This student has been deleted"], 204);
+    }
+    public function childrenForParent()
+    {
+        $user = request()->user();
+
+        // Check if the user is a parent
+        if ($user->role != 'parent') {
+            return response()->json(['error' => 'Only parents can view their children'], 403);
+        }
+
+        $children = $user->students;
+        return StudentResource::collection($children);
     }
 }

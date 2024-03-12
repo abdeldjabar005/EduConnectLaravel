@@ -26,7 +26,6 @@ class User extends Authenticatable
         'profile_picture',
         'bio',
         'contact_information',
-        'school_id',
     ];
     /**
      * The attributes that should be hidden for arrays.
@@ -47,23 +46,42 @@ class User extends Authenticatable
     ];
     public function students()
     {
-
             return $this->belongsToMany(Student::class, 'parent_student', 'parent_id', 'student_id');
-        }
+    }
 
-    public function schoolClasses()
+    public function classes()
     {
         if ($this->role == 'teacher') {
             return $this->hasMany(SchoolClass::class, 'teacher_id');
         }
-        return null;
+        return $this->belongsToMany(SchoolClass::class, 'class_user', 'user_id', 'class_id');
     }
+
+    public function schools()
+    {
+        if ($this->role == 'admin') {
+            return $this->hasOne(School::class, 'admin_id');
+        }
+        return $this->belongsToMany(School::class);
+    }
+    // In app/Models/User.php
 
     public function school()
     {
         if ($this->role == 'admin') {
             return $this->hasOne(School::class, 'admin_id');
         }
-        return $this->belongsTo(School::class);
+        return null;
     }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(Like::class);
+    }
+
 }

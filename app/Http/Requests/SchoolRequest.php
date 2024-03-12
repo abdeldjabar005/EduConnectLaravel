@@ -13,9 +13,10 @@ class SchoolRequest extends FormRequest
      */
     public function authorize()
     {
-        $user = $this->user();
-
-        return $user && $user->role === 'admin';
+//        $user = $this->user();
+//
+//        return $user && $user->role === 'admin';
+        return true;
     }
     public function rules()
     {

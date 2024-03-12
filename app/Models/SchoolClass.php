@@ -32,4 +32,12 @@ class SchoolClass extends Model
     {
         return $this->belongsToMany(Student::class, 'class_student', 'class_id', 'student_id');
     }
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'class_user', 'class_id', 'user_id');
+    }
+    public function joinRequests()
+    {
+        return $this->hasMany(JoinRequest::class, 'class_id');
+    }
 }
