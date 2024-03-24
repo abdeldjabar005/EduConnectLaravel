@@ -9,5 +9,7 @@ COPY . .
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-ENV PORT=8000
+ENV PORT=8000x
+RUN ["chmod", "+x", "/docker/entrypoint.sh"]
+
 ENTRYPOINT ["docker/entrypoint.sh"]
