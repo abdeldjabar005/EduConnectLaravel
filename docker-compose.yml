@@ -1,0 +1,35 @@
+version : "3.8"
+services:
+
+  php:
+    build:
+      context: .
+      target: php
+      args:
+          - APP_ENV=${APP_ENV}
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=${APP_ENV}
+      - CONTAINER_ROLE=app
+    working_dir: /var/www
+    depends_on:
+        - pgsql
+
+  pgsql:
+    image: postgres:16
+    ports:
+        - "5432:5432"
+    volumes:
+        - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+volumes:
+    db-data: ~

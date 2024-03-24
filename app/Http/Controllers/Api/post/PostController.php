@@ -281,4 +281,17 @@ class PostController extends Controller
         return PostResource::collection($posts);
     }
 
+
+    public function toggleSave(Post $post)
+    {
+        $user = auth()->user();
+
+        if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
+            $user->savedPosts()->detach($post->id);
+        } else {
+            $user->savedPosts()->attach($post->id);
+        }
+
+        return response()->json(['message' => 'Post saved status toggled successfully']);
+    }
 }

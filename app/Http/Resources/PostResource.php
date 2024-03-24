@@ -12,15 +12,19 @@ class PostResource extends JsonResource
             'id' => $this->id,
             'user_id' => $this->user_id,
             'class_or_school_id' => $this->class_id ? $this->class_id : $this->school_id,
+            'classname' => $this->class_id ? $this->class->name : $this->school->name,
             'text' => $this->text,
             'type' => $this->type,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'comments' => CommentResource::collection($this->whenLoaded('comments')),
-            'likes' => LikeResource::collection($this->whenLoaded('likes')),
+            'comments' => CommentResource::collection($this->comments),
+            'likes' => LikeResource::collection($this->likes),
             'comments_count' => $this->comments->count(),
             'likes_count' => $this->likes->count(),
-            'user' => new UserResource($this->whenLoaded('user')),
+            'first_name' => $this->user->first_name,
+            'last_name' => $this->user->last_name,
+            'profile_picture' => $this->user->profile_picture,
+            'isSaved' => $this->savedByUsers->contains(auth()->user()),
         ];
 
         switch ($this->type) {

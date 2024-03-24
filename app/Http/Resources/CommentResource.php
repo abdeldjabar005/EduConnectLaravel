@@ -7,6 +7,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class CommentResource extends JsonResource
 {
+
+    public static $wrap = null;
+
     /**
      * Transform the resource into an array.
      *
@@ -23,8 +26,11 @@ class CommentResource extends JsonResource
             'updated_at' => $this->updated_at,
             'likes_count' => $this->likes->count(),
             'replies_count' => $this->replies->count(),
-            'replies' => ReplyResource::collection($this->whenLoaded('replies')),
-            'user' => new UserResource($this->whenLoaded('user')),
+            'replies' => ReplyResource::collection($this->replies),
+            'first_name' => $this->user->first_name,
+            'last_name' => $this->user->last_name,
+            'profile_picture' => $this->user->profile_picture,
+
 
         ];
     }

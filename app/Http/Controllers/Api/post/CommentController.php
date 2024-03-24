@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\post;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Post;
 use Illuminate\Http\Request;
@@ -12,7 +13,9 @@ class CommentController extends Controller
     public function index()
     {
         $comments = Comment::all();
-        return response()->json($comments, 200);
+        return CommentResource::collection($comments);
+
+//        return response()->json($comments, 200);
     }
 
     public function store(Request $request, $postId)
@@ -24,8 +27,9 @@ class CommentController extends Controller
             'post_id' => $postId,
             'text' => $request->text,
         ]);
+        return new CommentResource($comment);
 
-        return response()->json($comment, 201);
+//        return response()->json($comment, 201);
     }
 
     public function show($id)
@@ -65,6 +69,6 @@ class CommentController extends Controller
         $post = Post::findOrFail($postId);
         $comments = $post->comments;
 
-        return response()->json($comments, 200);
+        return CommentResource::collection($comments);
     }
 }

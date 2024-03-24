@@ -109,6 +109,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/class/{classId}', [PostController::class, 'postsByClass']);
         Route::get('/user/classes', [PostController::class, 'postsByUserClasses']);
 
+//saving post
+        Route::post('/{post}/toggle-save', [PostController::class, 'toggleSave']);
+
+
         // Route for getting all posts of each class in a specific school for the admin
         Route::get('/school/admin', [PostController::class, 'postsBySchoolAdmin']);
 
@@ -117,7 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::ApiResource('/{post}/comments', CommentController::class);
         // /api/posts/{post}/comments/{comment}
-        Route::get('/{post}/all-comments', [PostController::class, 'comments']);
+        Route::get('/{post}/all-comments', [CommentController::class, 'comments']);
 
         Route::post('/{post}/likes', [LikeController::class, 'store']);
         Route::delete('/{post}/likes', [LikeController::class, 'destroy']);

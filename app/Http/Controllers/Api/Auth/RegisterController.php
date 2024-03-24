@@ -47,12 +47,13 @@ class RegisterController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'password' => Hash::make($request->password),
+            'is_verified' => false,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         // Generate OTP
-        $otpCode = rand(100000, 999999);
+        $otpCode = rand(10000, 99999);
 
         // Save OTP in database
         DB::table('otp')->insert([
