@@ -1,27 +1,16 @@
-FROM php:8.1
+FROM php:8.1.10 as php
 
-WORKDIR /var/www/html
+RUN apt-get update -y
+RUN apt-get install -y unzip libpq-dev libcurl4-gnutls-dev
+RUN docker-php-ext-install pdo pdo_pgsql
 
+WORKDIR /var/www
 COPY . .
 
-RUN apt-get update && \
-    apt-get install -y \
-    git \
-    unzip
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+ENV PORT=8000
 
-# Install PHP extensions required by your application
-RUN docker-php-ext-install pdo pdo_mysql
+RUN chmod +x entrypoint.sh
+ENTRYPOINT [ "bash", "-c", "docker//entrypoint.sh" ]
 
-# Install application dependencies using Composer
-RUN composer install --no-interaction --optimize-autoloader
-
-# Set up Apache virtual host
-#
-#COPY apache.conf /etc/apache2/sites-available/000-default.conf
-#RUN a2enmod rewrite
-#
-## Start Apache server
-#CMD ["apache2-foreground"]
