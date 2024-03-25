@@ -106,6 +106,7 @@ class SchoolController extends Controller
     }
     public function viewSchoolJoinRequestsForUser(Request $request)
     {
+
         $user = $request->user();
 
         $joinRequests = SchoolJoinRequest::where('user_id', $user->id)->get();
