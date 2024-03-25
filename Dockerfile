@@ -19,7 +19,6 @@ RUN docker-php-ext-install pdo pdo_mysql
 RUN composer install --no-interaction --optimize-autoloader
 
 # Set up Apache virtual host
-COPY vhost.conf /etc/apache2/sites-available/000-default.conf
 
 RUN a2enmod rewrite
 
