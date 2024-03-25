@@ -2,7 +2,7 @@ FROM php:8.0-apache
 
 WORKDIR /var/www/html
 
-COPY ./src /var/www/html/
+COPY . .
 
 RUN apt-get update && \
     apt-get install -y \
@@ -19,7 +19,8 @@ RUN docker-php-ext-install pdo pdo_mysql
 RUN composer install --no-interaction --optimize-autoloader
 
 # Set up Apache virtual host
-COPY apache.conf /etc/apache2/sites-available/000-default.conf
+COPY vhost.conf /etc/apache2/sites-available/000-default.conf
+
 RUN a2enmod rewrite
 
 # Start Apache server
