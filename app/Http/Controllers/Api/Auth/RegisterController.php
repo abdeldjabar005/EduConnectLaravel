@@ -52,17 +52,14 @@ class RegisterController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Generate OTP
         $otpCode = rand(10000, 99999);
 
-        // Save OTP in database
         DB::table('otp')->insert([
             'user_id' => $user->id,
             'otp' => $otpCode,
-            'expires_at' => now()->addMinutes(10), // OTP expires after 10 minutes
+            'expires_at' => now()->addMinutes(10),
         ]);
 
-        // Send OTP to user's email
         Mail::to($user->email)->send(new OtpMail($otpCode));
 
 

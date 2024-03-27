@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\School\SchoolController;
 use App\Http\Controllers\Api\Student\StudentController;
 use App\Http\Controllers\profile\ProfileController;
 use App\Http\Controllers\QuoteController;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,6 +29,15 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/verify', [OtpController::class, 'verify']);
+
+Route::middleware([
+    'api',
+    StartSession::class,
+])->group(function () {
+    Route::post('/forgot-password', [LoginController::class, 'forgotPassword']);
+    Route::post('/validate-otp', [LoginController::class ,'validateOtp']);
+    Route::post('/reset-password', [LoginController::class, 'resetPassword']);
+});
 
 // ->middleware('verified') will use it later to check if the user is verified
 
