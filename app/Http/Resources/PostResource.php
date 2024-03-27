@@ -17,8 +17,8 @@ class PostResource extends JsonResource
             'type' => $this->type,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'comments' => CommentResource::collection($this->comments),
-            'likes' => LikeResource::collection($this->likes),
+//            'comments' => CommentResource::collection($this->comments),
+//            'likes' => LikeResource::collection($this->likes),
             'comments_count' => $this->comments->count(),
             'likes_count' => $this->likes->count(),
             'first_name' => $this->user->first_name,
@@ -29,16 +29,16 @@ class PostResource extends JsonResource
 
         switch ($this->type) {
             case 'video':
-                $data['video'] = new VideoResource($this->whenLoaded('video'));
+                $data['video'] = new VideoResource($this->video);
                 break;
             case 'picture':
-                $data['pictures'] = PictureResource::collection($this->whenLoaded('pictures'));
+                $data['pictures'] = PictureResource::collection($this->pictures);
                 break;
             case 'poll':
-                $data['poll'] = new PollResource($this->whenLoaded('poll'));
+                $data['poll'] = new PollResource($this->poll);
                 break;
             case 'attachment':
-                $data['attachment'] = new AttachmentResource($this->whenLoaded('attachment'));
+                $data['attachment'] = new AttachmentResource($this->attachment);
                 break;
         }
 

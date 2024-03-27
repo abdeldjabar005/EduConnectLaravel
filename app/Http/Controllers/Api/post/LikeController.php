@@ -10,10 +10,15 @@ class LikeController extends Controller
 {
     public function store(Request $request, $postId)
     {
-        $like = Like::create([
+        $like = Like::firstOrCreate([
             'user_id' => auth()->id(),
             'post_id' => $postId,
         ]);
+
+        if (!$like->wasRecentlyCreated) {
+            $like->delete();
+            return response()->json(['message' => 'like deleted'], 204);
+        }
 
         return response()->json($like, 201);
     }

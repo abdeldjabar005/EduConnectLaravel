@@ -84,7 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('join-requests')->group(function () {
-        // Route for parents to send a join request
+        // Route for parents to send a join request to a class
         Route::post('/{studentId}', [SchoolClassController::class, 'addStudentToClass']);
         // Route for teachers to approve a join request
         Route::post('/{joinRequestId}/approve', [SchoolClassController::class, 'approveJoinRequest']);
@@ -109,7 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/class/{classId}', [PostController::class, 'postsByClass']);
         Route::get('/user/classes', [PostController::class, 'postsByUserClasses']);
 
-//saving post
+        //saving post
         Route::post('/{post}/toggle-save', [PostController::class, 'toggleSave']);
 
 

@@ -66,7 +66,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(School::class);
     }
-    // In app/Models/User.php
+
 
     public function school()
     {

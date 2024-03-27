@@ -16,8 +16,14 @@ class CommentLikeController extends Controller
             'comment_id' => $comment->id,
         ]);
 
+        if (!$like->wasRecentlyCreated) {
+            $like->delete();
+            return response()->json(['message' => 'like deleted'], 204);
+        }
         return response()->json($like, 201);
     }
+
+
 
     public function destroy(Comment $comment)
     {

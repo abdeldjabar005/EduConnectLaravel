@@ -11,6 +11,9 @@ use App\Models\School;
 use App\Models\User;
 use App\Models\Vote;
 use Illuminate\Http\Request;
+use Intervention\Image\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class PostController extends Controller
 {
@@ -61,7 +64,30 @@ class PostController extends Controller
         }
         $post->save();
 
-        if ($request->type === 'poll') {
+
+        if ($request->hasFile('picture')) {
+            $files = $request->file('picture');
+            foreach ($files as $file) {
+                $manager = new ImageManager(new Driver());
+
+                $image = $manager->read($file->getRealPath());
+
+                $image->resize(700, 500);
+
+                $filename = uniqid() . '.jpg';
+
+                $path = 'posts/picture/' . $filename;
+                $image->save(storage_path('app/public/' . $path), 75);
+
+                $post->pictures()->create(['url' => $path]);
+            }
+        }
+
+
+
+        if($request->type ==='text') {
+            return response()->json(new PostResource($post), 201);
+        }elseif ($request->type === 'poll') {
             // Create the poll
             $options = $request->options;
             $poll = new Poll([
@@ -71,7 +97,7 @@ class PostController extends Controller
             ]);
             $post->poll()->save($poll);
         } else {
-            foreach (['video', 'picture', 'attachment'] as $type) {
+            foreach (['video', 'attachment'] as $type) {
                 if ($request->has($type)) {
                     $files = $request->{$type};
                     if (is_array($files)) {
@@ -113,12 +139,29 @@ class PostController extends Controller
         if (auth()->id() !== $post->user_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
+        if ($request->hasFile('picture')) {
+            $files = $request->file('picture');
+            foreach ($files as $file) {
+                $manager = new ImageManager(new Driver());
+
+                $image = $manager->read($file->getRealPath());
+
+                $image->resize(700, 500);
+
+                $filename = uniqid() . '.jpg';
+
+                $path = 'posts/picture/' . $filename;
+                $image->save(storage_path('app/public/' . $path), 75);
+
+                $post->pictures()->create(['url' => $path]);
+            }
+        }
 
         // Update the post
         $post->update($request->only(['text', 'type']));
 
         // Update the video, picture, attachment, and poll if they are present in the request
-        foreach (['video', 'picture', 'attachment'] as $type) {
+        foreach (['video', 'attachment'] as $type) {
             if ($request->has($type)) {
                 $files = $request->{$type};
                 foreach ($files as $file) {
@@ -200,7 +243,7 @@ class PostController extends Controller
     public function postsByClass($classId)
     {
         // Retrieve the posts that belong to the specified class
-        $posts = Post::where('class_id', $classId)->get();
+        $posts = Post::where('class_id', $classId)->paginate(6);
 
         $posts->load('videos', 'pictures', 'poll', 'attachments');
 
@@ -220,7 +263,7 @@ class PostController extends Controller
         }
 
         // Retrieve the posts that belong to the user's classes
-        $posts = Post::whereIn('class_id', $userClasses->pluck('id'))->get();
+        $posts = Post::whereIn('class_id', $userClasses->pluck('id'))->paginate(6);
 
         // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');
@@ -242,7 +285,7 @@ class PostController extends Controller
             return response()->json(['error' => 'User is not part of this school.'], 403);
         }
         // Retrieve the posts that belong to the school
-        $posts = $school->posts;
+        $posts = $school->posts()->paginate(10); // 10 is the number of items per page
 
         // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');
@@ -251,7 +294,7 @@ class PostController extends Controller
         return PostResource::collection($posts);
     }
 
-    //all school posts that admin recieves
+//all school posts that admin receives
     public function postsBySchoolAdmin(Request $request)
     {
         // Retrieve the admin
@@ -272,7 +315,7 @@ class PostController extends Controller
         // Retrieve the posts that belong to the school's classes
         $posts = Post::whereHas('class', function ($query) use ($school) {
             $query->where('school_id', $school->id);
-        })->get();
+        })->paginate(10); // 10 is the number of items per page
 
         // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');
@@ -281,17 +324,19 @@ class PostController extends Controller
         return PostResource::collection($posts);
     }
 
-
     public function toggleSave(Post $post)
     {
         $user = auth()->user();
 
         if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
             $user->savedPosts()->detach($post->id);
+            return response()->json(['message' => 'Post unsaved '], 204);
+
         } else {
             $user->savedPosts()->attach($post->id);
+            return response()->json(['message' => 'Post saved successfully'], 200);
+
         }
 
-        return response()->json(['message' => 'Post saved status toggled successfully']);
     }
 }

@@ -134,14 +134,14 @@ class SchoolClassController extends Controller
         $classId = $request->input('class_id');
         $class = SchoolClass::findOrFail($classId);
 
-        // Check if the user is a parent
-        if ($user->role != 'parent') {
-            return response()->json(['error' => 'Only parents can add students to a class'], 403);
-        }
+//        // Check if the user is a parent
+//        if ($user->role != 'parent') {
+//            return response()->json(['error' => 'you are not the parent of this student'], 403);
+//        }
 
         // Check if the parent is in the same school as the class
         if (!$user->schools->contains($class->school_id)) {
-            return response()->json(['error' => 'Parent and class are not in the same school'], 403);
+            return response()->json(['error' => 'User and class are not in the same school'], 403);
         }
 
         // Check if the student is a child of the parent
@@ -216,9 +216,9 @@ public function viewJoinRequests(Request $request)
     $user = $request->user();
 
     // Check if the user is a parent
-    if ($user->role != 'parent') {
-        return response()->json(['error' => 'Only parents can view join requests'], 403);
-    }
+//    if ($user->role != 'parent') {
+//        return response()->json(['error' => 'Only parents can view join requests'], 403);
+//    }
 
     $joinRequests = JoinRequest::where('parent_id', $user->id)->get();
 
@@ -231,7 +231,7 @@ public function viewAllJoinRequests(Request $request)
     $user = $request->user();
 
     // Check if the user is a teacher
-    if ($user->role != 'teacher') {
+    if ($user->role != 'teacher' && $user->role != 'admin') {
         return response()->json(['error' => 'Only teachers can view join requests'], 403);
     }
 

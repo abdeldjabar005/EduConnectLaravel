@@ -27,7 +27,7 @@ class PostRequest extends FormRequest
             'class_id' => 'required_without:school_id|integer',
             'school_id' => 'required_without:class_id|integer',
             'text' => 'required|string',
-            'type' => 'required|string|in:video,picture,poll,attachment',
+            'type' => 'required|string|in:text,video,picture,poll,attachment',
             'video' => 'file|mimes:mp4|max:10240', // 10 MB
             'picture.*' => 'file|mimes:jpeg,jpg,png|max:10240', // 10 MB
             'attachment' => 'file|mimes:pdf,txt|max:10240', // 10 MB
@@ -45,7 +45,7 @@ class PostRequest extends FormRequest
             'class_id.required' => 'A class id is required.',
             'text.required' => 'Text is required.',
             'type.required' => 'A type is required.',
-            'type.in' => 'The type must be one of the following: video, picture, poll, like, attachment.',
+            'type.in' => 'The type must be one of the following: text, video, picture, poll, attachment.',
         ];
     }
 
