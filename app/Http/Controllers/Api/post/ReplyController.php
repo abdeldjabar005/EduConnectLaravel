@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\post;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ReplyResource;
 use App\Models\Comment;
 use App\Models\Reply;
+use App\Models\ReplyLike;
 use Illuminate\Http\Request;
 
 
@@ -13,7 +15,8 @@ class ReplyController extends Controller
     public function index(Comment $comment)
     {
         $replies = $comment->replies;
-        return response()->json($replies, 200);
+        return ReplyResource::collection($replies);
+//        return response()->json($replies, 200);
     }
 
     public function show(Comment $comment, Reply $reply)
@@ -33,7 +36,8 @@ class ReplyController extends Controller
             'text' => $request->text,
         ]);
 
-        return response()->json($reply, 201);
+        return new ReplyResource($reply);
+//        return response()->json($reply, 201);
     }
 
     public function update(Request $request, Reply $reply)
@@ -62,4 +66,26 @@ class ReplyController extends Controller
 
         return response()->json(null, 204);
     }
+public function like(Request $request, $replyId)
+{
+    $reply = Reply::find($replyId);
+
+    if (!$reply) {
+        return response()->json(['message' => 'Reply not found'], 404);
+    }
+
+    $like = ReplyLike::firstOrCreate([
+        'user_id' => auth()->id(),
+        'reply_id' => $replyId,
+    ]);
+
+    $isLiked = true;
+
+    if (!$like->wasRecentlyCreated) {
+        $like->delete();
+        $isLiked = false;
+    }
+
+    return response()->json(['replyId' => $replyId, 'isLiked' => $isLiked]);
+}
 }

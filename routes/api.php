@@ -134,16 +134,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{post}/all-comments', [CommentController::class, 'comments']);
 
         Route::post('/{post}/likes', [LikeController::class, 'store']);
-        Route::delete('/{post}/likes', [LikeController::class, 'destroy']);
+//        Route::delete('/{post}/likes', [LikeController::class, 'destroy']);
+        Route::get('/{post}/isliked', [LikeController::class, 'isLiked']);
 
-        Route::post('/{comment}/likes', [CommentLikeController::class, 'store']);
-        Route::delete('/{comment}/likes', [CommentLikeController::class, 'destroy']);
+        Route::post('/{comment}/like', [CommentLikeController::class, 'store']);
+        Route::delete('/{comment}/like', [CommentLikeController::class, 'destroy']);
 
         Route::get('/comments/{comment}/replies', [ReplyController::class, 'index']);
         Route::get('/comments/{comment}/replies/{reply}', [ReplyController::class, 'show']);
         Route::post('/{comment}/replies', [ReplyController::class, 'store']);
         Route::delete('/{comment}/replies/{reply}', [ReplyController::class, 'destroy']);
         Route::put('/comments/{comment}/replies/{reply}', [ReplyController::class, 'update']);
+        Route::post('/replies/{replyId}/like', [ReplyController::class, 'like']);
 
     });
 });

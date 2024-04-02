@@ -16,13 +16,16 @@ class ReplyResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
             'comment_id' => $this->comment_id,
+            'user_id' => $this->user_id,
             'text' => $this->text,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'likes_count' => $this->likes->count(),
-            'user' => new UserResource($this->whenLoaded('user')),
+            'isLiked' => $this->likes->contains('user_id', auth()->id()),
+            'first_name' => $this->user->first_name,
+            'last_name' => $this->user->last_name,
+            'profile_picture' => $this->user->profile_picture,
 
         ];
     }

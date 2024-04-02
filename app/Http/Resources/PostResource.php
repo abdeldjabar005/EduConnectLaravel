@@ -21,6 +21,7 @@ class PostResource extends JsonResource
 //            'likes' => LikeResource::collection($this->likes),
             'comments_count' => $this->comments->count(),
             'likes_count' => $this->likes->count(),
+            'isLiked' => $this->likes->contains('user_id', auth()->id()),
             'first_name' => $this->user->first_name,
             'last_name' => $this->user->last_name,
             'profile_picture' => $this->user->profile_picture,

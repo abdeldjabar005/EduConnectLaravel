@@ -9,21 +9,28 @@ use Illuminate\Http\Request;
 
 class CommentLikeController extends Controller
 {
-    public function store(Request $request, Comment $comment)
-    {
-        $like = CommentLike::create([
-            'user_id' => auth()->id(),
-            'comment_id' => $comment->id,
-        ]);
+   public function store(Request $request, $commentId)
+{
+    $comment = Comment::find($commentId);
 
-        if (!$like->wasRecentlyCreated) {
-            $like->delete();
-            return response()->json(['message' => 'like deleted'], 204);
-        }
-        return response()->json($like, 201);
+    if (!$comment) {
+        return response()->json(['message' => 'Comment not found'], 404);
     }
 
+    $like = CommentLike::firstOrCreate([
+        'user_id' => auth()->id(),
+        'comment_id' => $commentId,
+    ]);
 
+    $isLiked = true;
+
+    if (!$like->wasRecentlyCreated) {
+        $like->delete();
+        $isLiked = false;
+    }
+
+    return response()->json(['commentId' => $commentId, 'isLiked' => $isLiked]);
+}
 
     public function destroy(Comment $comment)
     {
