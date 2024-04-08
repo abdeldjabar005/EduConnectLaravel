@@ -69,7 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Route for admins to reject a join request
         Route::post('/{schoolJoinRequest}/reject', [SchoolController::class, 'rejectSchoolJoinRequest']);
-
+        Route::post('/join-school', [SchoolController::class, 'joinSchoolUsingCode']);
     });
 
     Route::prefix('classes')->group(function () {
@@ -101,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Route for teachers to reject a join request
         Route::post('/{joinRequestId}/reject', [SchoolClassController::class, 'rejectJoinRequest']);
-
+        Route::post('/class/join', [SchoolClassController::class, 'joinClassUsingCode']);
         // Route for parents to view the status of their join requests
         Route::get('/', [SchoolClassController::class, 'viewJoinRequests']);
 
@@ -130,6 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/school/{schoolId}', [PostController::class, 'postsBySchool']);
 
         Route::ApiResource('/{post}/comments', CommentController::class);
+        Route::get('/{comment}/comment', [CommentController::class, 'comment']);
         // /api/posts/{post}/comments/{comment}
         Route::get('/{post}/all-comments', [CommentController::class, 'comments']);
 

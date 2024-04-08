@@ -15,7 +15,7 @@ class SchoolClassRequest extends FormRequest
     {
         $user = $this->user();
 
-        return $user && $user->role === 'teacher';
+        return $user && $user->role === 'teacher' || $user->role === 'admin';
 
     }
 

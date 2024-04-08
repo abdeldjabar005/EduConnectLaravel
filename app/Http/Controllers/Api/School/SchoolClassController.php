@@ -9,6 +9,7 @@ use App\Models\JoinRequest;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Str;
 
 /**
  * @group School Classes
@@ -43,18 +44,24 @@ class SchoolClassController extends Controller
      * return SchoolClassResource
      */
     public function store(SchoolClassRequest $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
+    $schoolId = $request->input('school_id');
 
-
-        $data = $request->only('name', 'grade_level', 'subject', 'school_id');
-        $data['teacher_id'] = $user->id;
-
-
-        $class = SchoolClass::create($data);
-
-        return response(new SchoolClassResource($class), 201);
+    // Check if the user is a member of the school
+    if (!$user->schools->contains($schoolId)) {
+        return response()->json(['error' => 'You are not a member of this school'], 403);
     }
+
+    $data = $request->only('name', 'grade_level', 'subject', 'school_id');
+    $data['teacher_id'] = $user->id;
+    $data['code'] = Str::random(10);
+
+    $class = SchoolClass::create($data);
+    $user->classes()->attach($class->id);
+
+    return response(new SchoolClassResource($class), 201);
+}
 
     /**
      *
@@ -240,5 +247,25 @@ public function viewAllJoinRequests(Request $request)
     })->get();
 
     return response()->json(['joinRequests' => $joinRequests]);
+}
+    public function joinClassUsingCode(Request $request)
+{
+    $code = $request->input('code');
+    $class = SchoolClass::where('code', $code)->first();
+
+    if (!$class) {
+        return response()->json(['message' => 'Invalid code'], 404);
+    }
+
+    $user = $request->user();
+
+    // Check if the user is already joined to the class
+    if ($user->classes()->where('classes.id', $class->id)->exists()) {
+        return response()->json(['message' => 'You have already joined this class'], 409);
+    }
+
+    $user->classes()->attach($class->id);
+
+    return response()->json(['message' => 'Successfully joined the class']);
 }
 }

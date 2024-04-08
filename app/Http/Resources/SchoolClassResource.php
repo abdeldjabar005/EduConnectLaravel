@@ -21,7 +21,7 @@ class SchoolClassResource extends JsonResource
             'teacher_id' => $this->teacher_id,
             'grade' => $this->grade_level,
             'subject' => $this->subject,
-
+            'code' => $this->code,
         ];
     }
 }

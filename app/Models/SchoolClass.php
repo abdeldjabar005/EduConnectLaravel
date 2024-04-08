@@ -16,7 +16,8 @@ class SchoolClass extends Model
         'grade_level',
         'subject',
         'teacher_id',
-        'school_id'
+        'school_id',
+        'code'
     ];
 
     public function teacher()

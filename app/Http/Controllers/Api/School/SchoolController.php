@@ -8,6 +8,7 @@ use App\Http\Resources\SchoolResource;
 use App\Models\School;
 use App\Models\SchoolJoinRequest;
 use Illuminate\Http\Request;
+use Str;
 
 /**
  * @group Schools
@@ -23,21 +24,23 @@ class SchoolController extends Controller
     }
 
     public function store(SchoolRequest $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-
-        $data = $request->only('name', 'address');
-        $data['admin_id'] = $user->id;
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('school_images', 'public');
-            $data['image'] = $path;
-        }
-
-        $school = School::create($data);
-        return response(new SchoolResource($school), 201);
+    $data = $request->only('name', 'address');
+    $data['admin_id'] = $user->id;
+    $data['code'] = Str::random(10);
+    if ($request->hasFile('image')) {
+        $path = $request->file('image')->store('school_images', 'public');
+        $data['image'] = $path;
     }
 
+    $school = School::create($data);
+
+    $user->schools()->attach($school->id);
+
+    return response(new SchoolResource($school), 201);
+}
     public function show(School $school)
     {
         return response(new SchoolResource($school), 201);
@@ -171,5 +174,25 @@ class SchoolController extends Controller
     $joinRequest->delete();
 
     return response()->json(['message' => 'Join request rejected successfully']);
+}
+   public function joinSchoolUsingCode(Request $request)
+{
+    $code = $request->input('code');
+    $school = School::where('code', $code)->first();
+
+    if (!$school) {
+        return response()->json(['message' => 'Invalid code'], 404);
+    }
+
+    $user = $request->user();
+
+    // Check if the user is already joined to the school
+    if ($user->schools()->where('schools.id', $school->id)->exists()) {
+        return response()->json(['message' => 'You have already joined this school'], 409);
+    }
+
+    $user->schools()->attach($school->id);
+
+    return response()->json(['message' => 'Successfully joined the school']);
 }
 }

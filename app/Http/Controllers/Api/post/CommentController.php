@@ -21,7 +21,11 @@ class CommentController extends Controller
     public function store(Request $request, $postId)
     {
         $request->validate(['text' => 'required']);
+        $post = Post::find($postId);
 
+        if (!$post) {
+            return response()->json(['message' => 'Post not found'], 404);
+        }
         $comment = Comment::create([
             'user_id' => auth()->id(),
             'post_id' => $postId,
@@ -70,5 +74,10 @@ class CommentController extends Controller
         $comments = $post->comments;
 
         return CommentResource::collection($comments);
+    }
+    public function comment( $commentId)
+    {
+        $comment = Comment::findOrFail($commentId);
+        return new CommentResource($comment);
     }
 }

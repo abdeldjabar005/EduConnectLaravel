@@ -14,6 +14,7 @@ class School extends Model
         'address',
         'image',
         'admin_id',
+        'code'
     ];
 
     public function admin()
