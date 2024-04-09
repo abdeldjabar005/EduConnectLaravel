@@ -25,7 +25,7 @@ class SchoolClassResource extends JsonResource
             'teacher_first_name' => $this->teacher->first_name,
             'teacher_last_name' => $this->teacher->last_name,
             'members_count' => $this->users->count(),
-
+            'image' => $this->image,
         ];
     }
 }

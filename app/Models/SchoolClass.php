@@ -17,7 +17,8 @@ class SchoolClass extends Model
         'subject',
         'teacher_id',
         'school_id',
-        'code'
+        'code',
+        'image'
     ];
 
     public function teacher()

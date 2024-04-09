@@ -33,6 +33,8 @@ class SchoolController extends Controller
     if ($request->hasFile('image')) {
         $path = $request->file('image')->store('school_images', 'public');
         $data['image'] = $path;
+    }else {
+        $data['image'] = 'school_images/schooldefault.jpeg';
     }
 
     $school = School::create($data);

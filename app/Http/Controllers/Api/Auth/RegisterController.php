@@ -41,14 +41,17 @@ class RegisterController extends Controller
      */
     public function register(RegisterRequest $request)
     {
-        $user = User::create([
+        $data =[
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
             'role' => $request->role,
             'password' => Hash::make($request->password),
             'is_verified' => false,
-        ]);
+        ];
+
+        $data['profile_picture'] = 'users-avatar/avatar.png';
+        $user = User::create($data);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

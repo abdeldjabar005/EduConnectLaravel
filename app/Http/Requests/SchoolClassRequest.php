@@ -33,6 +33,7 @@ class SchoolClassRequest extends FormRequest
                     'grade_level' => 'required|integer',
                     'subject' => 'required|string',
                     'school_id' => 'nullable|integer',
+                    'image' => 'nullable|image',
                 ];
             case 'schoolclass.update':
                 return [
@@ -40,6 +41,7 @@ class SchoolClassRequest extends FormRequest
                     'grade_level' => 'sometimes|required|integer',
                     'subject' => 'sometimes|required|string',
                     'school_id' => 'nullable|integer',
+                    'image' => 'nullable|image',
                 ];
             default:
                 return [];

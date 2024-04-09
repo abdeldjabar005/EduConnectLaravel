@@ -58,6 +58,12 @@ class SchoolClassController extends Controller
     $data['school_id'] = $schoolId;
     $data['code'] = Str::random(10);
 
+    if ($request->hasFile('image')) {
+        $path = $request->file('image')->store('class_images', 'public');
+        $data['image'] = $path;
+    } else {
+        $data['image'] = 'class_images/classdefault.jpg';
+    }
     $class = SchoolClass::create($data);
     $user->classes()->attach($class->id);
 
@@ -113,6 +119,10 @@ class SchoolClassController extends Controller
         }
         $data = $request->only('name', 'grade_level', 'subject', 'school_id');
         $data['teacher_id'] = $request->user()->id;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('class_images', 'public');
+            $data['image'] = $path;
+        }
         $class->fill($data);
         $class->save();
 
