@@ -195,4 +195,24 @@ class SchoolController extends Controller
 
     return response()->json(['message' => 'Successfully joined the school']);
 }
+
+public function getSchoolMembers(School $school)
+{
+    $user = auth()->user();
+
+//     Check if the user is a member of the school
+    if (!$user->schools()->where('schools.id', $school->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this school'], 403);
+    }
+
+    $members = $school->users->map(function ($user) {
+        return [
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'role' => $user->role,
+        ];
+    });
+
+    return response()->json($members);
+}
 }

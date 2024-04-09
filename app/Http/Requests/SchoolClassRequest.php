@@ -32,12 +32,14 @@ class SchoolClassRequest extends FormRequest
                     'name' => 'required|string',
                     'grade_level' => 'required|integer',
                     'subject' => 'required|string',
+                    'school_id' => 'nullable|integer',
                 ];
             case 'schoolclass.update':
                 return [
                     'name' => 'sometimes|required|string',
                     'grade_level' => 'sometimes|required|integer',
                     'subject' => 'sometimes|required|string',
+                    'school_id' => 'nullable|integer',
                 ];
             default:
                 return [];

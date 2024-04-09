@@ -46,15 +46,16 @@ class SchoolClassController extends Controller
     public function store(SchoolClassRequest $request)
 {
     $user = $request->user();
-    $schoolId = $request->input('school_id');
+    $schoolId = $request->input('school_id', null);
 
     // Check if the user is a member of the school
-    if (!$user->schools->contains($schoolId)) {
+    if (!$user->schools->contains($schoolId) && $schoolId !== null) {
         return response()->json(['error' => 'You are not a member of this school'], 403);
     }
 
-    $data = $request->only('name', 'grade_level', 'subject', 'school_id');
+    $data = $request->only('name', 'grade_level', 'subject');
     $data['teacher_id'] = $user->id;
+    $data['school_id'] = $schoolId;
     $data['code'] = Str::random(10);
 
     $class = SchoolClass::create($data);
@@ -267,5 +268,23 @@ public function viewAllJoinRequests(Request $request)
     $user->classes()->attach($class->id);
 
     return response()->json(['message' => 'Successfully joined the class']);
+}
+public function getClassMembers(SchoolClass $class)
+{
+    $user = auth()->user();
+
+    // Check if the user is a member of the class
+    if (!$user->classes()->where('classes.id', $class->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this class'], 403);
+    }
+    $members = $class->users->map(function ($user) {
+        return [
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'role' => $user->role,
+        ];
+    });
+
+    return response()->json($members);
 }
 }

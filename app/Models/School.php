@@ -22,6 +22,10 @@ class School extends Model
         return $this->belongsTo(User::class, 'admin_id');
     }
 
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'school_user', 'school_id', 'user_id');
+    }
     public function teachers()
     {
         return $this->hasMany(User::class, 'school_id')->where('role', 'teacher');

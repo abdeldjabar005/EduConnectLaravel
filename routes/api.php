@@ -52,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{school}', [SchoolController::class, 'update']);
         Route::delete('/{school}', [SchoolController::class, 'destroy']);
         Route::post('/join', [SchoolController::class, 'joinSchool']);
+        Route::get('/{school}/members', [SchoolController::class, 'getSchoolMembers']);
     });
 
     Route::prefix('school-join-requests')->group(function () {
@@ -79,7 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/student/{studentId}', [SchoolClassController::class, 'classesForStudent']);
         Route::put('/{id}', [SchoolClassController::class, 'update']);
         Route::delete('/{id}', [SchoolClassController::class, 'destroy']);
-
+        Route::get('/{class}/members', [SchoolClassController::class, 'getClassMembers']);
     });
 
     Route::prefix('students')->group(function () {
