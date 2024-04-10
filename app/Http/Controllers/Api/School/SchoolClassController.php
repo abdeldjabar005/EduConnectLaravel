@@ -277,7 +277,7 @@ public function viewAllJoinRequests(Request $request)
 
     $user->classes()->attach($class->id);
 
-    return response()->json(['message' => 'Successfully joined the class']);
+    return response()->json(new SchoolClassResource($class));
 }
 public function getClassMembers(SchoolClass $class)
 {

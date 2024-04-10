@@ -195,7 +195,7 @@ class SchoolController extends Controller
 
     $user->schools()->attach($school->id);
 
-    return response()->json(['message' => 'Successfully joined the school']);
+    return response()->json(new SchoolResource($school));
 }
 
 public function getSchoolMembers(School $school)
