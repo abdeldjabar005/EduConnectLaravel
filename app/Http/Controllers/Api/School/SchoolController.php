@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\School;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SchoolRequest;
+use App\Http\Resources\SchoolClassResource;
 use App\Http\Resources\SchoolResource;
 use App\Models\School;
 use App\Models\SchoolJoinRequest;
@@ -209,12 +210,34 @@ public function getSchoolMembers(School $school)
 
     $members = $school->users->map(function ($user) {
         return [
+            'id' => $user->id,
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'role' => $user->role,
+            'profile_picture' => $user->profile_picture ?? 'users-avatar/avatar.png',
+
         ];
     });
 
     return response()->json($members);
+}
+
+public function getSchoolClasses(Request $request, School $school)
+{
+    $user = $request->user();
+
+    // Check if the user is a member of the school
+    if (!$user->schools()->where('schools.id', $school->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this school'], 403);
+    }
+
+    $classes = $school->classes->map(function ($class) use ($user) {
+        return [
+            'class' => new SchoolClassResource($class),
+            'is_member' => $class->users()->where('users.id', $user->id)->exists(),
+        ];
+    });
+
+    return response()->json($classes);
 }
 }

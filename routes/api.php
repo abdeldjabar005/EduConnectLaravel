@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{school}', [SchoolController::class, 'destroy']);
         Route::post('/join', [SchoolController::class, 'joinSchool']);
         Route::get('/{school}/members', [SchoolController::class, 'getSchoolMembers']);
+        Route::get('/{school}/classes', [SchoolController::class, 'getSchoolClasses']);
     });
 
     Route::prefix('school-join-requests')->group(function () {
