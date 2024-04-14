@@ -289,9 +289,12 @@ public function getClassMembers(SchoolClass $class)
     }
     $members = $class->users->map(function ($user) {
         return [
+            'id' => $user->id,
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'role' => $user->role,
+            'profile_picture' => $user->profile_picture ?? 'users-avatar/avatar.png',
+
         ];
     });
 

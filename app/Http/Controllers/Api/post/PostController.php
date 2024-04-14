@@ -285,7 +285,7 @@ class PostController extends Controller
             return response()->json(['error' => 'User is not part of this school.'], 403);
         }
         // Retrieve the posts that belong to the school
-        $posts = $school->posts()->paginate(10); // 10 is the number of items per page
+        $posts = $school->posts()->paginate(10);
 
         // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');

@@ -41,7 +41,7 @@ class StudentController extends Controller
     public function store(StudentRequest $request)
     {
 
-        $data = $request->only('first_name', 'last_name', 'grade_level');
+        $data = $request->only('first_name', 'last_name', 'grade_level', 'relation');
 
         $student = Student::create($data);
 
@@ -97,7 +97,7 @@ public function classesForStudent(string $studentId)
         }
 
 
-        $data = $request->only('first_name', 'last_name', 'grade_level');
+        $data = $request->only('first_name', 'last_name', 'grade_level', 'relation');
         $data['parent_id'] = $request->user()->id;
 
         $student->fill($data);
@@ -121,16 +121,16 @@ public function classesForStudent(string $studentId)
 
         return response()->json(["response" => "This student has been deleted"], 204);
     }
-    public function childrenForParent()
-    {
-        $user = request()->user();
+  public function childrenForParent(Request $request)
+{
+    $user = $request->user();
 
-        // Check if the user is a parent
-        if ($user->role != 'parent') {
-            return response()->json(['error' => 'Only parents can view their children'], 403);
-        }
-
-        $children = $user->students;
-        return StudentResource::collection($children);
+    if ($user->role != 'parent') {
+        return response()->json(['error' => 'Only parents can view their children'], 403);
     }
+
+    $students = $user->students;
+
+    return StudentResource::collection($students);
+}
 }

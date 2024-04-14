@@ -92,7 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
 //        Route::get('/{studentId}/classes', [StudentController::class, 'classesForStudent']);
         Route::put('/{id}', [StudentController::class, 'update']);
         Route::delete('/{id}', [StudentController::class, 'destroy']);
-        Route::get('/children', [StudentController::class, 'childrenForParent']);
+        Route::get('/children/parent', [StudentController::class, 'childrenForParent']);
     });
 
     Route::prefix('join-requests')->group(function () {
