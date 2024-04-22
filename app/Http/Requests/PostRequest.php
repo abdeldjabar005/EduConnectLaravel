@@ -28,9 +28,9 @@ class PostRequest extends FormRequest
             'school_id' => 'required_without:class_id|integer',
             'text' => 'required|string',
             'type' => 'required|string|in:text,video,picture,poll,attachment',
-            'video' => 'file|mimes:mp4|max:10240', // 10 MB
+            'video.*' => 'file|mimes:mp4|max:10240', // 10 MB
             'picture.*' => 'file|mimes:jpeg,jpg,png|max:10240', // 10 MB
-            'attachment' => 'file|mimes:pdf,txt|max:10240', // 10 MB
+            'attachment.*' => 'file|mimes:pdf,txt|max:10240', // 10 MB
         ];
     }
 

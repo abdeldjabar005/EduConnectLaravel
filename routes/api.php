@@ -54,6 +54,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/join', [SchoolController::class, 'joinSchool']);
         Route::get('/{school}/members', [SchoolController::class, 'getSchoolMembers']);
         Route::get('/{school}/classes', [SchoolController::class, 'getSchoolClasses']);
+        Route::delete('/{school}/members/{user}', [SchoolController::class, 'removeMember']);
+        Route::delete('/{school}/classes/{class}', [SchoolController::class, 'removeClass']);
+        Route::post('/{school}/request/verification', [SchoolController::class, 'sendVerificationRequest']);
+        Route::post('/{school}/verify', [SchoolController::class, 'verifySchool']);
     });
 
     Route::prefix('school-join-requests')->group(function () {
@@ -75,6 +79,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('classes')->group(function () {
+        Route::get('/owned', [SchoolClassController::class, 'ownedClasses']);
+
         Route::get('/', [SchoolClassController::class, 'index']);
         Route::get('/{id}', [SchoolClassController::class, 'show']);
         Route::post('/', [SchoolClassController::class, 'store']);
@@ -82,6 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [SchoolClassController::class, 'update']);
         Route::delete('/{id}', [SchoolClassController::class, 'destroy']);
         Route::get('/{class}/members', [SchoolClassController::class, 'getClassMembers']);
+        Route::delete('/{class}/members/{user}', [SchoolClassController::class, 'removeMember']);
+        Route::delete('/classes/{class}', [SchoolClassController::class, 'deleteClass']);
     });
 
     Route::prefix('students')->group(function () {

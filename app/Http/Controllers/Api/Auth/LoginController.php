@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api\Auth;
+use App\Jobs\SendOtpEmail;
 use App\Mail\OtpMail;
 use Illuminate\Support\Facades\DB;
 
@@ -72,7 +73,8 @@ class LoginController extends Controller
             'expires_at' => now()->addMinutes(3),
         ]);
 
-        Mail::to($user->email)->send(new OtpMail($otp));
+//        Mail::to($user->email)->send(new OtpMail($otp));
+        dispatch(new SendOtpEmail($user->email, $otp));
 
         // Store the user's email in the session
         $request->session()->put('email', $user->email);

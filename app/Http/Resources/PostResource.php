@@ -30,7 +30,7 @@ class PostResource extends JsonResource
 
         switch ($this->type) {
             case 'video':
-                $data['video'] = new VideoResource($this->video);
+                $data['video'] = VideoResource::collection($this->videos);
                 break;
             case 'picture':
                 $data['pictures'] = PictureResource::collection($this->pictures);
@@ -39,7 +39,7 @@ class PostResource extends JsonResource
                 $data['poll'] = new PollResource($this->poll);
                 break;
             case 'attachment':
-                $data['attachment'] = new AttachmentResource($this->attachment);
+                $data['attachment'] =  AttachmentResource::collection($this->attachments);
                 break;
         }
 

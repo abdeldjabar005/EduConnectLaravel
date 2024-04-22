@@ -11,6 +11,7 @@ use App\Models\School;
 use App\Models\User;
 use App\Models\Vote;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -19,7 +20,10 @@ class PostController extends Controller
 {
     public function index()
     {
-        $posts = Post::all();
+
+        $posts = Cache::remember('posts', 60, function () {
+            return Post::all();
+        });
         return response()->json($posts, 200);
     }
 
@@ -112,6 +116,7 @@ class PostController extends Controller
                 }
             }
         }
+        Cache::forget('posts');
 
         $post->load('videos', 'pictures', 'poll', 'attachments');
 
@@ -180,6 +185,7 @@ class PostController extends Controller
                 $post->poll()->create($pollData); // Create a new poll
             }
         }
+        Cache::forget('posts');
 
         return response()->json(new PostResource($post), 200);
     }
@@ -192,6 +198,7 @@ class PostController extends Controller
 
         // Delete the post
         $post->delete();
+        Cache::forget('posts');
 
         return response()->json(null, 204);
     }
@@ -242,9 +249,9 @@ class PostController extends Controller
 
     public function postsByClass($classId)
     {
-        // Retrieve the posts that belong to the specified class
-        $posts = Post::where('class_id', $classId)->paginate(6);
-
+        $posts = Cache::remember("postsByClass_{$classId}", 60, function () use ($classId) {
+            return Post::where('class_id', $classId)->paginate(6);
+        });
         $posts->load('videos', 'pictures', 'poll', 'attachments');
 
         // Return the posts as a JSON response
@@ -262,9 +269,12 @@ class PostController extends Controller
             return response()->json(['error' => 'User has no classes.'], 400);
         }
 
-        // Retrieve the posts that belong to the user's classes
-        $posts = Post::whereIn('class_id', $userClasses->pluck('id'))->paginate(6);
+        $userId = $request->user()->id;
 
+        $posts = Cache::remember("postsByUserClasses_{$userId}", 60, function () use ($request) {
+            $userClasses = $request->user()->classes;
+            return Post::whereIn('class_id', $userClasses->pluck('id'))->paginate(6);
+        });
         // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');
 
@@ -274,19 +284,14 @@ class PostController extends Controller
     //posts posted by specific school
     public function postsBySchool(Request $request, $schoolId)
     {
-        // Retrieve the user
-        $user = $request->user();
-
-        // Retrieve the school
-        $school = School::findOrFail($schoolId);
-
-        // Check if the user is part of the school
-        if (!$user->schools->contains($school)) {
-            return response()->json(['error' => 'User is not part of this school.'], 403);
-        }
-        // Retrieve the posts that belong to the school
-        $posts = $school->posts()->paginate(10);
-
+        $posts = Cache::remember("postsBySchool_{$schoolId}", 60, function () use ($request, $schoolId) {
+            $user = $request->user();
+            $school = School::findOrFail($schoolId);
+            if (!$user->schools->contains($school)) {
+                return response()->json(['error' => 'User is not part of this school.'], 403);
+            }
+            return $school->posts()->paginate(6);
+        });
         // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');
 
@@ -296,33 +301,27 @@ class PostController extends Controller
 
 //all school posts that admin receives
     public function postsBySchoolAdmin(Request $request)
-    {
-        // Retrieve the admin
-        $admin = $request->user();
+{
+    $adminId = $request->user()->id;
 
-        // Check if the user is an admin
+    $posts = Cache::remember("postsBySchoolAdmin_{$adminId}", 60, function () use ($request) {
+        $admin = $request->user();
         if ($admin->role != 'admin') {
             return response()->json(['error' => 'Only admins can view all school posts'], 403);
         }
-
-        // Retrieve the school that the admin administers
         $school = School::where('admin_id', $admin->id)->first();
-
-        // If the admin does not administer any school
         if (!$school) {
             return response()->json(['error' => 'Admin does not administer any school'], 404);
         }
-        // Retrieve the posts that belong to the school's classes
-        $posts = Post::whereHas('class', function ($query) use ($school) {
+        return Post::whereHas('class', function ($query) use ($school) {
             $query->where('school_id', $school->id);
-        })->paginate(10); // 10 is the number of items per page
+        })->paginate(10);
+    });
 
-        // Eager load the relationships
-        $posts->load('videos', 'pictures', 'poll', 'attachments');
+    $posts->load('videos', 'pictures', 'poll', 'attachments');
 
-        // Return the posts as a JSON response
-        return PostResource::collection($posts);
-    }
+    return PostResource::collection($posts);
+}
 
     public function toggleSave(Post $post)
     {

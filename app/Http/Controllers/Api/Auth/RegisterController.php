@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Jobs\SendOtpEmail;
 use App\Mail\OtpMail;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -63,7 +64,8 @@ class RegisterController extends Controller
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        Mail::to($user->email)->send(new OtpMail($otpCode));
+//        Mail::to($user->email)->send(new OtpMail($otpCode));
+        dispatch(new SendOtpEmail($user->email, $otpCode));
 
 
         return (new UserResource($user))->additional(['token' => $token]);

@@ -53,7 +53,7 @@ class User extends Authenticatable
 
     public function class()
     {
-        if ($this->role == 'teacher') {
+        if ($this->role == 'teacher' || $this->role == 'admin') {
             return $this->hasMany(SchoolClass::class, 'teacher_id');
         }
     }
@@ -68,13 +68,14 @@ class User extends Authenticatable
     }
 
 
-    public function school()
-    {
-        if ($this->role == 'admin') {
-            return $this->hasOne(School::class, 'admin_id');
-        }
+   public function school()
+{
+    if ($this->role == 'admin') {
+        return $this->hasOne(School::class, 'admin_id');
+    } else {
         return null;
     }
+}
 
     public function comments()
     {

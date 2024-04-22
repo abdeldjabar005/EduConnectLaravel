@@ -19,6 +19,8 @@ class SchoolResource extends JsonResource
             'name' => $this->name,
             'address' => $this->address,
             'image' => $this->image,
+            'is_verified' => $this->verified,
+            'verification_request_sent' => $this->verification_request_sent,
             'admin_id' => $this->admin_id,
             'admin_first_name' => $this->admin->first_name,
             'admin_last_name' => $this->admin->last_name,

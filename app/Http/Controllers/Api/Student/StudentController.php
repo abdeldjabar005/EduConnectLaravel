@@ -92,7 +92,7 @@ public function classesForStudent(string $studentId)
     {
         $student = Student::findOrFail($id);
 
-        if ($request->user()->id !== $student->parent_id) {
+        if (!$student->parents->contains(request()->user()->id)) {
             return response()->json(['error' => 'Only the parent can update the student'], 403);
         }
 
@@ -109,18 +109,19 @@ public function classesForStudent(string $studentId)
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        $student = Student::findOrFail($id);
+  public function destroy(string $id)
+{
+    $student = Student::findOrFail($id);
 
-        if (request()->user()->id !== $student->parent_id) {
-            return response()->json(['error' => 'Only the parent can delete the student'], 403);
-        }
-
-        $student->delete();
-
-        return response()->json(["response" => "This student has been deleted"], 204);
+    if (!$student->parents->contains(request()->user()->id)) {
+        return response()->json(['error' => 'Only the parent can delete the student'], 403);
     }
+
+    $student->parents()->detach();
+    $student->delete();
+
+    return response()->json(["response" => "This student has been deleted"], 204);
+}
   public function childrenForParent(Request $request)
 {
     $user = $request->user();

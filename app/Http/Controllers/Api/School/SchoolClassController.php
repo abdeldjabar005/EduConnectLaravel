@@ -8,6 +8,7 @@ use App\Http\Resources\SchoolClassResource;
 use App\Models\JoinRequest;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Str;
 
@@ -299,5 +300,42 @@ public function getClassMembers(SchoolClass $class)
     });
 
     return response()->json($members);
+}
+public function ownedClasses(Request $request)
+{
+    $user = $request->user();
+
+    // Check if the user is a teacher
+    if ($user->role == 'parent' ) {
+        return response()->json(['error' => 'Only teachers or admins can view their owned classes'], 403);
+    }
+
+    $classes = $user->class;
+
+    return SchoolClassResource::collection($classes);
+}
+public function removeMember(Request $request, SchoolClass $class, User $user)
+{
+    $teacher = $request->user();
+
+    // Check if the authenticated user is the teacher of the class
+    if ($teacher->id !== $class->teacher_id) {
+        return response()->json(['error' => 'Only the teacher can remove members from the class'], 403);
+    }
+
+    // Check if the user to be removed is the same as the authenticated user
+    if ($teacher->id === $user->id) {
+        return response()->json(['error' => 'The teacher cannot remove themselves from the class'], 403);
+    }
+
+    // Check if the user is a member of the class
+    if (!$user->classes()->where('classes.id', $class->id)->exists()) {
+        return response()->json(['error' => 'The user is not a member of this class'], 404);
+    }
+
+    // Detach the user from the class
+    $user->classes()->detach($class->id);
+
+    return response()->json(['message' => 'The user has been removed from the class']);
 }
 }

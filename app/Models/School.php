@@ -14,9 +14,14 @@ class School extends Model
         'address',
         'image',
         'admin_id',
-        'code'
+        'code',
+        'verified',
+        'verification_request_sent'
     ];
-
+    protected $casts = [
+        'id' => 'integer',
+        'verification_request_sent' => 'boolean',
+    ];
     public function admin()
     {
         return $this->belongsTo(User::class, 'admin_id');

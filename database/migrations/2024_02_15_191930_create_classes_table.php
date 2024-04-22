@@ -14,7 +14,6 @@ class CreateClassesTable extends Migration
             $table->integer('grade_level');
             $table->string('subject');
             $table->foreignId('teacher_id')->constrained('users');
-
             $table->foreignId('school_id')->constrained('schools');
             $table->timestamps();
         });

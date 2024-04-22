@@ -20,7 +20,10 @@ class SchoolClass extends Model
         'code',
         'image'
     ];
-
+    protected $casts = [
+        'id' => 'integer',
+        'school_id' => 'integer', 
+    ];
     public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id');
