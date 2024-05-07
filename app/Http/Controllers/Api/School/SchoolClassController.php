@@ -10,6 +10,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Str;
 
 /**
@@ -65,7 +66,10 @@ class SchoolClassController extends Controller
     } else {
         $data['image'] = 'class_images/classdefault.jpg';
     }
+
     $class = SchoolClass::create($data);
+    Cache::forget('school.classes.' . $class->school_id);
+
     $user->classes()->attach($class->id);
 
     return response(new SchoolClassResource($class), 201);
@@ -140,16 +144,17 @@ class SchoolClassController extends Controller
         if (request()->user()->id !== $class->teacher_id) {
             return response()->json(['error' => 'Only the class owner can delete the class'], 403);
         }
+        $class->joinRequests()->delete();
 
         $class->delete();
 
         return response()->json(["response" => "This class has been deleted"], 204);
     }
 
-    public function addStudentToClass(Request $request, string $studentId)
+    public function addStudentToClass(Request $request)
     {
         $user = $request->user();
-        $student = Student::findOrFail($studentId);
+//        $student = Student::findOrFail($studentId);
         $classId = $request->input('class_id');
         $class = SchoolClass::findOrFail($classId);
 
@@ -163,13 +168,13 @@ class SchoolClassController extends Controller
             return response()->json(['error' => 'User and class are not in the same school'], 403);
         }
 
-        // Check if the student is a child of the parent
-        if (!$user->students->contains($studentId)) {
-            return response()->json(['error' => 'The student is not a child of the parent'], 403);
-        }
+//        // Check if the student is a child of the parent
+//        if (!$user->students->contains($studentId)) {
+//            return response()->json(['error' => 'The student is not a child of the parent'], 403);
+//        }
 
         // Check if a join request already exists
-        $existingJoinRequest = JoinRequest::where('student_id', $studentId)
+        $existingJoinRequest = JoinRequest::where('student_id', $user->id)
             ->where('class_id', $classId)
             ->where('parent_id', $user->id)
             ->first();
@@ -180,36 +185,36 @@ class SchoolClassController extends Controller
 
         // Create a join request
         $joinRequest = new JoinRequest();
-        $joinRequest->student_id = $studentId;
+        $joinRequest->student_id = $user->id;
         $joinRequest->class_id = $classId;
         $joinRequest->parent_id = $user->id;
         $joinRequest->save();
+        Cache::forget('school.classes.' . $class->school_id);
 
         return response()->json(['message' => 'Join request sent successfully']);
     }
 
 
+public function approveJoinRequest(Request $request, string $joinRequestId)
+{
+    $user = $request->user();
+    $joinRequest = JoinRequest::findOrFail($joinRequestId);
+    $class = SchoolClass::findOrFail($joinRequest->class_id);
 
-    public function approveJoinRequest(Request $request, string $joinRequestId)
-    {
-        $user = $request->user();
-        $joinRequest = JoinRequest::findOrFail($joinRequestId);
-        $class = SchoolClass::findOrFail($joinRequest->class_id);
-
-        // Check if the user is the class owner
-        if ($user->id != $class->teacher_id) {
-            return response()->json(['error' => 'Only the class owner can approve join requests'], 403);
-        }
-
-        // Add the student to the class
-        $student = Student::findOrFail($joinRequest->student_id);
-        $student->classes()->attach($class->id);
-
-        // Delete the join request
-        $joinRequest->delete();
-
-        return response()->json(['message' => 'Join request approved successfully']);
+    // Check if the user is the class owner
+    if ($user->id != $class->teacher_id) {
+        return response()->json(['error' => 'Only the class owner can approve join requests'], 403);
     }
+
+    // Add the user to the class
+    $user->classes()->attach($class->id);
+
+    // Delete the join request
+    $joinRequest->delete();
+    Cache::forget('school.classes.' . $class->school_id);
+
+    return response()->json(['message' => 'Join request approved successfully']);
+}
 
     // Method for teachers to reject a join request
 public function rejectJoinRequest(Request $request, string $joinRequestId)
@@ -225,6 +230,7 @@ public function rejectJoinRequest(Request $request, string $joinRequestId)
 
     // Delete the join request
     $joinRequest->delete();
+    Cache::forget('school.classes.' . $class->school_id);
 
     return response()->json(['message' => 'Join request rejected successfully']);
 }
@@ -256,9 +262,50 @@ public function viewAllJoinRequests(Request $request)
 
     $joinRequests = JoinRequest::whereHas('class', function ($query) use ($user) {
         $query->where('teacher_id', $user->id);
-    })->get();
+    })->with('parent', 'class')->get()->map(function ($joinRequest) {
+        return [
+            'id' => $joinRequest->id,
+            'name' => $joinRequest->class->name,
+            'first_name' => $joinRequest->parent->first_name,
+            'last_name' => $joinRequest->parent->last_name,
+            'profile_picture' => $joinRequest->parent->profile_picture ?? 'users-avatar/avatar.png',
+        ];
+    });
 
-    return response()->json(['joinRequests' => $joinRequests]);
+    return response()->json($joinRequests);
+}
+public function viewClassJoinRequests(Request $request, $classId)
+{
+    $user = $request->user();
+    $class = SchoolClass::findOrFail($classId);
+
+    // Check if the user is a teacher or admin
+    if ($user->role != 'teacher' && $user->role != 'admin') {
+        return response()->json(['error' => 'Only teachers can view join requests'], 403);
+    }
+    // Check if the user is the actual teacher of the class
+    if ($user->id !== $class->teacher_id) {
+        return response()->json(['error' => 'You are not the teacher of this class'], 403);
+    }
+
+    $joinRequests = JoinRequest::where('class_id', $classId)
+        ->whereHas('class', function ($query) use ($user) {
+            $query->where('teacher_id', $user->id);
+        })
+        ->with('parent', 'class')
+        ->get()
+        ->map(function ($joinRequest) {
+            return [
+                'id' => $joinRequest->id,
+                'class_name' => $joinRequest->class->name,
+                'first_name' => $joinRequest->parent->first_name,
+                'last_name' => $joinRequest->parent->last_name,
+                'profile_picture' => $joinRequest->parent->profile_picture ?? 'users-avatar/avatar.png',
+
+            ];
+        });
+
+    return response()->json($joinRequests);
 }
     public function joinClassUsingCode(Request $request)
 {
@@ -280,6 +327,24 @@ public function viewAllJoinRequests(Request $request)
 
     return response()->json(new SchoolClassResource($class));
 }
+public function leaveClass(Request $request, SchoolClass $class)
+{
+    $user = $request->user();
+
+    if ($user->id === $class->teacher_id) {
+        return response()->json(['message' => 'The teacher cannot leave the class'], 403);
+    }
+
+    if (!$user->classes()->where('classes.id', $class->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this class'], 403);
+    }
+
+    // Detach the user from the class
+    $user->classes()->detach($class->id);
+    Cache::forget('class.members.' . $class->id);
+
+    return response()->json(['message' => 'You have successfully left the class']);
+}
 public function getClassMembers(SchoolClass $class)
 {
     $user = auth()->user();
@@ -288,15 +353,32 @@ public function getClassMembers(SchoolClass $class)
     if (!$user->classes()->where('classes.id', $class->id)->exists()) {
         return response()->json(['message' => 'You are not a member of this class'], 403);
     }
-    $members = $class->users->map(function ($user) {
-        return [
-            'id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'role' => $user->role,
-            'profile_picture' => $user->profile_picture ?? 'users-avatar/avatar.png',
 
-        ];
+    $members = Cache::remember('class.members.' . $class->id, 60, function () use ($class) {
+        return $class->users->map(function ($user) use ($class) {
+            $children = $user->students->filter(function ($student) use ($class) {
+                return $student->classes->contains($class->id);
+            })->map(function ($student) {
+                return [
+                    'id' => $student->id,
+                    'first_name' => $student->first_name,
+                    'last_name' => $student->last_name,
+                    'relation' => $student->relation,
+                    'relation_display' => $student->relation . ' of ' . $student->first_name,
+                ];
+            })->values();
+
+            return [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'role' => $user->role,
+                'profile_picture' => $user->profile_picture ?? 'users-avatar/avatar.png',
+                'bio' => $user->bio,
+                'contact' => $user->contact_information,
+                'children' => $children,
+            ];
+        });
     });
 
     return response()->json($members);
@@ -337,5 +419,57 @@ public function removeMember(Request $request, SchoolClass $class, User $user)
     $user->classes()->detach($class->id);
 
     return response()->json(['message' => 'The user has been removed from the class']);
+}
+public function associateStudentWithClass(Request $request, SchoolClass $class)
+{
+    $user = $request->user();
+    $studentId = $request->input('student_id');
+
+    if ($user->role != 'parent') {
+        return response()->json(['error' => 'Only parents can associate a student with a class'], 403);
+    }
+
+    if (!$user->students->contains($studentId)) {
+        return response()->json(['error' => 'The student is not a child of the parent'], 403);
+    }
+
+    if ($class->students()->where('students.id', $studentId)->exists()) {
+        return response()->json(['error' => 'The student is already part of this class'], 403);
+    }
+
+    $class->students()->attach($studentId);
+    Cache::forget('class.members.' . $class->id);
+    Cache::forget('class.students.' . $class->id);
+
+    return response()->json(['message' => 'The student has been associated with the class']);
+}
+public function getClassStudentsWithParents(Request $request, SchoolClass $class)
+{
+    $user = $request->user();
+
+    if (!$user->classes()->where('classes.id', $class->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this class'], 403);
+    }
+
+    $students = Cache::remember('class.students.' . $class->id, 60, function () use ($class) {
+        return $class->students()->with('parents')->get()->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'first_name' => $student->first_name,
+                'last_name' => $student->last_name,
+                'parents' => $student->parents->map(function ($parent) {
+                    return [
+                        'id' => $parent->id,
+                        'first_name' => $parent->first_name,
+                        'last_name' => $parent->last_name,
+                        'role' => $parent->role,
+                            'profile_picture' => $parent->profile_picture ?? 'users-avatar/avatar.png',
+                    ];
+                }),
+            ];
+        });
+    });
+
+    return response()->json($students);
 }
 }

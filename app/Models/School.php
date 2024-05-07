@@ -20,6 +20,7 @@ class School extends Model
     ];
     protected $casts = [
         'id' => 'integer',
+        'verified' => 'boolean',
         'verification_request_sent' => 'boolean',
     ];
     public function admin()
@@ -36,6 +37,10 @@ class School extends Model
         return $this->hasMany(User::class, 'school_id')->where('role', 'teacher');
     }
 
+    public function students()
+{
+    return $this->belongsToMany(Student::class, 'school_student');
+}
     public function classes()
     {
         return $this->hasMany(SchoolClass::class, 'school_id');

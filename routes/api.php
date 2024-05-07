@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 Route::post('/register', [RegisterController::class, 'register']);
+Route::post('/resendotp', [RegisterController::class, 'resendOtp']);
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/verify', [OtpController::class, 'verify']);
 
@@ -52,12 +53,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{school}', [SchoolController::class, 'update']);
         Route::delete('/{school}', [SchoolController::class, 'destroy']);
         Route::post('/join', [SchoolController::class, 'joinSchool']);
+        Route::post('/{school}/leave', [SchoolController::class, 'leaveSchool']);
         Route::get('/{school}/members', [SchoolController::class, 'getSchoolMembers']);
+        Route::post('/{school}/associate', [SchoolController::class, 'associateStudentWithSchool']);
+        Route::get('/{school}/students', [SchoolController::class, 'getSchoolStudentsWithParents']);
         Route::get('/{school}/classes', [SchoolController::class, 'getSchoolClasses']);
         Route::delete('/{school}/members/{user}', [SchoolController::class, 'removeMember']);
         Route::delete('/{school}/classes/{class}', [SchoolController::class, 'removeClass']);
         Route::post('/{school}/request/verification', [SchoolController::class, 'sendVerificationRequest']);
         Route::post('/{school}/verify', [SchoolController::class, 'verifySchool']);
+        Route::get('/verification-requests', [SchoolController::class, 'getSchoolsWithVerificationRequest']);
     });
 
     Route::prefix('school-join-requests')->group(function () {
@@ -66,7 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Route for admins to view all join requests for their school
         Route::get('/', [SchoolController::class, 'viewSchoolJoinRequests']);
-
+        Route::get('/{schoolId}', [SchoolController::class, 'viewSchoolJoinRequestsForOneSchool']);
         // Route for users to view their own join requests
         Route::get('/user', [SchoolController::class, 'viewSchoolJoinRequestsForUser']);
 
@@ -88,6 +93,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [SchoolClassController::class, 'update']);
         Route::delete('/{id}', [SchoolClassController::class, 'destroy']);
         Route::get('/{class}/members', [SchoolClassController::class, 'getClassMembers']);
+        Route::post('/{class}/associate', [SchoolClassController::class, 'associateStudentWithClass']);
+        Route::get('/{class}/students', [SchoolClassController::class, 'getClassStudentsWithParents']);
+
+        Route::post('/{class}/leave', [SchoolClassController::class, 'leaveClass']);
         Route::delete('/{class}/members/{user}', [SchoolClassController::class, 'removeMember']);
         Route::delete('/classes/{class}', [SchoolClassController::class, 'deleteClass']);
     });
@@ -105,7 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('join-requests')->group(function () {
         // Route for parents to send a join request to a class
-        Route::post('/{studentId}', [SchoolClassController::class, 'addStudentToClass']);
+        Route::post('/', [SchoolClassController::class, 'addStudentToClass']);
         // Route for teachers to approve a join request
         Route::post('/{joinRequestId}/approve', [SchoolClassController::class, 'approveJoinRequest']);
 
@@ -114,9 +123,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/class/join', [SchoolClassController::class, 'joinClassUsingCode']);
         // Route for parents to view the status of their join requests
         Route::get('/', [SchoolClassController::class, 'viewJoinRequests']);
-
         // Route for teachers to view all join requests for their classes
         Route::get('/all', [SchoolClassController::class, 'viewAllJoinRequests']);
+        Route::get('/{classId}', [SchoolClassController::class, 'viewClassJoinRequests']);
+
     });
 
     Route::prefix('posts')->group(function () {
@@ -128,13 +138,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/vote/{id}', [PostController::class, 'vote']);
         Route::get('/class/{classId}', [PostController::class, 'postsByClass']);
         Route::get('/user/classes', [PostController::class, 'postsByUserClasses']);
-
+        Route::get('/user/posts', [PostController::class, 'explorePosts']);
         //saving post
         Route::post('/{post}/toggle-save', [PostController::class, 'toggleSave']);
 
 
         // Route for getting all posts of each class in a specific school for the admin
-        Route::get('/school/admin', [PostController::class, 'postsBySchoolAdmin']);
+        Route::get('/school/admin', [PostController::class, 'postsByAdminSchool']);
 
         // Route for getting posts by a specific school
         Route::get('/school/{schoolId}', [PostController::class, 'postsBySchool']);

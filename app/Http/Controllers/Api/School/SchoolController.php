@@ -6,16 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SchoolRequest;
 use App\Http\Resources\SchoolClassResource;
 use App\Http\Resources\SchoolResource;
+use App\Models\JoinRequest;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolJoinRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Mail\Mailable;
 use Str;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Mail\Message;
-use Symfony\Component\Mime\Part\TextPart;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * @group Schools
@@ -39,6 +38,8 @@ class SchoolController extends Controller
     $data = $request->only('name', 'address');
     $data['admin_id'] = $user->id;
     $data['code'] = Str::random(10);
+    $data['verified'] = false;
+    $data['verification_request_sent'] = false;
     if ($request->hasFile('image')) {
         $path = $request->file('image')->store('school_images', 'public');
         $data['image'] = $path;
@@ -128,21 +129,62 @@ class SchoolController extends Controller
         return response()->json($joinRequests);
     }
 
-    public function viewSchoolJoinRequests(Request $request)
-    {
-        $user = $request->user();
+   public function viewSchoolJoinRequests(Request $request)
+{
+    $user = $request->user();
 
-        // Only admins can view join requests
-        if ($user->role != 'admin') {
-            return response()->json(['error' => 'Only admins can view join requests'], 403);
-        }
-
-        $joinRequests = SchoolJoinRequest::whereHas('school', function ($query) use ($user) {
-            $query->where('admin_id', $user->id);
-        })->get();
-        return response()->json($joinRequests);
+    // Only admins can view join requests
+    if ($user->role != 'admin') {
+        return response()->json(['error' => 'Only admins can view join requests'], 403);
     }
 
+    $joinRequests = SchoolJoinRequest::whereHas('school', function ($query) use ($user) {
+        $query->where('admin_id', $user->id);
+    })->with('user', 'school')->get()->map(function ($joinRequest) {
+        return [
+            'id' => $joinRequest->id,
+            'name' => $joinRequest->school->name,
+            'first_name' => $joinRequest->user->first_name,
+            'last_name' => $joinRequest->user->last_name,
+            'profile_picture' => $joinRequest->user->profile_picture ?? 'users-avatar/avatar.png',
+
+        ];
+    });
+
+    return response()->json($joinRequests);
+}
+
+public function viewSchoolJoinRequestsForOneSchool(Request $request, $schoolId)
+{
+    $user = $request->user();
+    $school = School::findOrFail($schoolId);
+
+    // Only admins can view join requests
+    if ($user->role != 'admin') {
+        return response()->json(['error' => 'Only admins can view join requests'], 403);
+    }
+    if ($user->id !== $school->admin_id) {
+        return response()->json(['error' => 'You are not the admin of this school'], 403);
+    }
+
+    $joinRequests = SchoolJoinRequest::where('school_id', $schoolId)
+        ->whereHas('school', function ($query) use ($user) {
+            $query->where('admin_id', $user->id);
+        })
+        ->with('user', 'school')
+        ->get()
+        ->map(function ($joinRequest) {
+            return [
+                'id' => $joinRequest->id,
+                'name' => $joinRequest->school->name,
+                'first_name' => $joinRequest->user->first_name,
+                'last_name' => $joinRequest->user->last_name,
+                'profile_picture' => $joinRequest->user->profile_picture ?? 'users-avatar/avatar.png',
+            ];
+        });
+
+    return response()->json($joinRequests);
+}
     public function approveSchoolJoinRequest(Request $request, string $joinRequestId)
     {
         $user = $request->user();
@@ -206,29 +248,58 @@ class SchoolController extends Controller
 
     return response()->json(new SchoolResource($school));
 }
-
-public function getSchoolMembers(School $school)
+public function leaveSchool(Request $request, School $school)
 {
-    $user = auth()->user();
+    $user = $request->user();
 
-//     Check if the user is a member of the school
+    if ($user->id === $school->admin_id) {
+        return response()->json(['message' => 'The admin cannot leave the school'], 403);
+    }
     if (!$user->schools()->where('schools.id', $school->id)->exists()) {
         return response()->json(['message' => 'You are not a member of this school'], 403);
     }
 
-    $members = $school->users->map(function ($user) {
-        return [
-            'id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'role' => $user->role,
-            'profile_picture' => $user->profile_picture ?? 'users-avatar/avatar.png',
-        ];
+    $user->schools()->detach($school->id);
+    Cache::forget('school.members.' . $school->id);
+
+    return response()->json(['message' => 'You have successfully left the school']);
+}
+public function getSchoolMembers(School $school)
+{
+    $user = auth()->user();
+
+    // Check if the user is a member of the school
+    if (!$user->schools()->where('schools.id', $school->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this school'], 403);
+    }
+
+    $members = Cache::remember('school.members.' . $school->id, 60, function () use ($school) {
+        return $school->users->map(function ($user) use ($school) {
+            $children = $user->students->filter(function ($student) use ($school) {
+                return $student->schools->contains($school->id);
+            })->map(function ($student) {
+                return [
+                    'id' => $student->id,
+                    'first_name' => $student->first_name,
+                    'last_name' => $student->last_name,
+                    'relation' => $student->relation,
+                    'relation_display' => $student->relation . ' of ' . $student->first_name,
+                ];
+            })->values();
+
+            return [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'role' => $user->role,
+                'profile_picture' => $user->profile_picture ?? 'users-avatar/avatar.png',
+                'children' => $children,
+            ];
+        });
     });
 
     return response()->json($members);
 }
-
 public function getSchoolClasses(Request $request, School $school)
 {
     $user = $request->user();
@@ -238,11 +309,25 @@ public function getSchoolClasses(Request $request, School $school)
         return response()->json(['message' => 'You are not a member of this school'], 403);
     }
 
-    $classes = $school->classes->map(function ($class) use ($user) {
-        return [
-            'class' => new SchoolClassResource($class),
-            'is_member' => $class->users()->where('users.id', $user->id)->exists(),
-        ];
+    $classes = Cache::remember('school.classes.' . $school->id, 60, function () use ($school, $user) {
+        return $school->classes->map(function ($class) use ($user) {
+            $isMember = 0;
+            if ($class->users()->where('users.id', $user->id)->exists()) {
+                $isMember = 1;
+            } else {
+                // Check if there is a pending join request from the user to the class
+                $joinRequest = JoinRequest::where('student_id', $user->id)
+                    ->where('class_id', $class->id)
+                    ->first();
+                if ($joinRequest) {
+                    $isMember = 2;
+                }
+            }
+            return [
+                'class' => new SchoolClassResource($class),
+                'is_member' => $isMember,
+            ];
+        });
     });
 
     return response()->json($classes);
@@ -314,7 +399,7 @@ public function sendVerificationRequest(Request $request, School $school)
     $documentPath = $document->store('documents', 'public');
 
     // Send the email
-    Mail::raw("EduConnect Verification request for school: {$school->name}\nEmail: {$email}\nPhone Number: {$phoneNumber}", function ($message) use ($documentPath, $document) {
+    Mail::raw("EduConnect Verification request for school : {$school->name}\nEmail: {$email}\nPhone Number: {$phoneNumber}\n with the id: {$school->id}", function ($message) use ($documentPath, $document) {
         $message->to('abdeldjabar05@gmail.com')
               ->subject('School Verification Request')
               ->attach(storage_path('app/public/'.$documentPath), [
@@ -322,8 +407,23 @@ public function sendVerificationRequest(Request $request, School $school)
                   'mime' => $document->getClientMimeType(),
               ]);
     });
+    $school->verification_request_sent = true;
+    $school->save();
 
-    return response()->json(['message' => 'Verification request sent']);
+    return response()->json(new SchoolResource($school));
+
+}
+public function getSchoolsWithVerificationRequest(Request $request)
+{
+    $user = $request->user();
+
+    if ($user->role !== 'support') {
+        return response()->json(['error' => 'Only support can view schools with verification requests'], 403);
+    }
+
+    $schools = School::where('verification_request_sent', true)->get();
+
+    return SchoolResource::collection($schools);
 }
 public function verifySchool(Request $request, School $school)
 {
@@ -339,4 +439,58 @@ public function verifySchool(Request $request, School $school)
     return response()->json(['message' => 'School verified successfully']);
 }
 
+public function associateStudentWithSchool(Request $request, School $school)
+{
+    $user = $request->user();
+    $studentId = $request->input('student_id');
+
+    if ($user->role != 'parent') {
+        return response()->json(['error' => 'Only parents can associate a student with a school'], 403);
+    }
+
+    if (!$user->students->contains($studentId)) {
+        return response()->json(['error' => 'The student is not a relative of the parent'], 403);
+    }
+
+    if ($school->students()->where('students.id', $studentId)->exists()) {
+        return response()->json(['error' => 'The student is already part of this school'], 403);
+    }
+
+    $school->students()->attach($studentId);
+    Cache::forget('school.members.' . $school->id);
+    Cache::forget('school.students.' . $school->id);
+
+
+    return response()->json(['message' => 'The student has been associated with the school']);
+}
+public function getSchoolStudentsWithParents(Request $request, School $school)
+{
+    $user = $request->user();
+
+    if (!$user->schools()->where('schools.id', $school->id)->exists()) {
+        return response()->json(['message' => 'You are not a member of this school'], 403);
+    }
+
+    $students = Cache::remember('school.students.' . $school->id, 60, function () use ($school) {
+        return $school->students()->with('parents')->get()->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'first_name' => $student->first_name,
+                'last_name' => $student->last_name,
+                'parents' => $student->parents->map(function ($parent) {
+                    return [
+                        'id' => $parent->id,
+                        'first_name' => $parent->first_name,
+                        'last_name' => $parent->last_name,
+                        'role' => $parent->role,
+                        'profile_picture' => $parent->profile_picture ?? 'users-avatar/avatar.png',
+
+                    ];
+                }),
+            ];
+        });
+    });
+
+    return response()->json($students);
+}
 }

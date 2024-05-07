@@ -21,7 +21,7 @@ class PostController extends Controller
     public function index()
     {
 
-        $posts = Cache::remember('posts', 60, function () {
+        $posts = Cache::tags(['posts'])->remember('posts', 60, function () {
             return Post::all();
         });
         return response()->json($posts, 200);
@@ -60,12 +60,20 @@ class PostController extends Controller
 
         if (isset($validatedData['class_id'])) {
             $post->class_id = $validatedData['class_id'];
+            Cache::tags(['posts'])->forget("postsByClass_{$validatedData['class_id']}");
+
         }
 
 
         if (isset($validatedData['school_id'])) {
             $post->school_id = $validatedData['school_id'];
+            Cache::tags(['posts'])->forget("postsBySchool_{$validatedData['school_id']}");
+
         }
+        $adminId = auth()->id();
+        Cache::tags(['posts'])->forget("postsBySchoolAdmin_{$adminId}");
+        Cache::tags(['posts'])->forget("explorePosts_user_{$adminId}");
+
         $post->save();
 
 
@@ -107,7 +115,11 @@ class PostController extends Controller
                     if (is_array($files)) {
                         foreach ($files as $file) {
                             $path = $file->store('posts/' . $type, 'public');
-                            $post->{$type . 's'}()->create(['url' => $path]);
+                            $title = $file->getClientOriginalName();
+
+                            $post->{$type . 's'}()->create(['url' => $path,
+                                'name' => htmlentities(trim($title), ENT_QUOTES, 'UTF-8'),
+                            ]);
                         }
                     } else {
                         $path = $files->store('posts/' . $type, 'public');
@@ -116,79 +128,81 @@ class PostController extends Controller
                 }
             }
         }
-        Cache::forget('posts');
+//        Cache::forget('posts');
+        Cache::tags(['posts'])->flush();
 
         $post->load('videos', 'pictures', 'poll', 'attachments');
 
         return response()->json(new PostResource($post), 201);
     }
+public function update(Request $request, Post $post)
+{
+    // Validate the request data
+    $request->validate([
+        'text' => 'sometimes|string',
+        'type' => 'sometimes|string',
+        'video' => 'sometimes|array',
+        'video.*' => 'file',
+        'picture' => 'sometimes|array',
+        'picture.*' => 'file',
+        'attachment' => 'sometimes|array',
+        'attachment.*' => 'file',
+        'poll' => 'sometimes|array',
+        'poll.question' => 'sometimes|string',
+        'poll.options' => 'sometimes|array',
+    ]);
 
-    public function update(Request $request, Post $post)
-    {
-        // Validate the request data
-        $request->validate([
-            'text' => 'sometimes|string',
-            'type' => 'sometimes|string',
-            'video' => 'sometimes|array',
-            'video.*' => 'file',
-            'picture' => 'sometimes|array',
-            'picture.*' => 'file',
-            'attachment' => 'sometimes|array',
-            'attachment.*' => 'file',
-            'poll' => 'sometimes|array',
-            'poll.question' => 'sometimes|string',
-            'poll.options' => 'sometimes|array',
-        ]);
-
-        // Check if the authenticated user is the owner of the post
-        if (auth()->id() !== $post->user_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-        if ($request->hasFile('picture')) {
-            $files = $request->file('picture');
-            foreach ($files as $file) {
-                $manager = new ImageManager(new Driver());
-
-                $image = $manager->read($file->getRealPath());
-
-                $image->resize(700, 500);
-
-                $filename = uniqid() . '.jpg';
-
-                $path = 'posts/picture/' . $filename;
-                $image->save(storage_path('app/public/' . $path), 75);
-
-                $post->pictures()->create(['url' => $path]);
-            }
-        }
-
-        // Update the post
-        $post->update($request->only(['text', 'type']));
-
-        // Update the video, picture, attachment, and poll if they are present in the request
-        foreach (['video', 'attachment'] as $type) {
-            if ($request->has($type)) {
-                $files = $request->{$type};
-                foreach ($files as $file) {
-                    $path = $file->store('posts/' . $type, 'public');
-                    $post->{$type . 's'}()->create(['url' => $path]); // Create a new file
-                }
-            }
-        }
-
-        if ($request->has('poll')) {
-            $pollData = $request->poll;
-            $poll = $post->poll;
-            if ($poll) {
-                $poll->update($pollData); // Update the existing poll
-            } else {
-                $post->poll()->create($pollData); // Create a new poll
-            }
-        }
-        Cache::forget('posts');
-
-        return response()->json(new PostResource($post), 200);
+    // Check if the authenticated user is the owner of the post
+    if (auth()->id() !== $post->user_id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
+
+    if ($request->hasFile('picture')) {
+        $files = $request->file('picture');
+        foreach ($files as $file) {
+            $manager = new ImageManager(new Driver());
+
+            $image = $manager->read($file->getRealPath());
+
+            $image->resize(700, 500);
+
+            $filename = uniqid() . '.jpg';
+
+            $path = 'posts/picture/' . $filename;
+            $image->save(storage_path('app/public/' . $path), 75);
+
+            $post->pictures()->create(['url' => $path]);
+        }
+    }
+
+    // Update the post
+    $post->update($request->only(['text', 'type']));
+
+    // Update the video, picture, attachment, and poll if they are present in the request
+    foreach (['video', 'attachment'] as $type) {
+        if ($request->has($type)) {
+            $files = $request->{$type};
+            foreach ($files as $file) {
+                $path = $file->store('posts/' . $type, 'public');
+                $title = $file->getClientOriginalName();
+                $post->{$type . 's'}()->create(['url' => $path, 'name' => htmlentities(trim($title), ENT_QUOTES, 'UTF-8')]); // Create a new file with name
+            }
+        }
+    }
+
+    if ($request->has('poll')) {
+        $pollData = $request->poll;
+        $poll = $post->poll;
+        if ($poll) {
+            $poll->update($pollData); // Update the existing poll
+        } else {
+            $post->poll()->create($pollData); // Create a new poll
+        }
+    }
+    Cache::tags(['posts'])->flush();
+
+    return response()->json(new PostResource($post), 200);
+}
     public function destroy(Post $post)
     {
         // Check if the authenticated user is the owner of the post
@@ -198,7 +212,7 @@ class PostController extends Controller
 
         // Delete the post
         $post->delete();
-        Cache::forget('posts');
+        Cache::tags(['posts'])->flush();
 
         return response()->json(null, 204);
     }
@@ -238,6 +252,7 @@ class PostController extends Controller
                 'option' => $request->option,
             ]);
         }
+        Cache::tags(['posts'])->flush();
 
         // Encode the results array and save it back to the database
         $poll->results = json_encode($results);
@@ -246,21 +261,42 @@ class PostController extends Controller
         // Return a success response
         return $vote ? response()->json(['success' => 'Vote revoked.'], 200) : response()->json(['success' => 'Vote counted.'], 200);
     }
+public function postsByClass($classId, Request $request)
+{
+    $pageNumber = $request->get('page', 1);
+    $lastPost = Post::where('class_id', $classId)->latest()->first();
+    $lastPostUpdate = $lastPost ? $lastPost->updated_at : now();
 
-    public function postsByClass($classId)
-    {
-        $posts = Cache::remember("postsByClass_{$classId}", 60, function () use ($classId) {
-            return Post::where('class_id', $classId)->paginate(6);
-        });
-        $posts->load('videos', 'pictures', 'poll', 'attachments');
+    $posts = Cache::tags(['posts'])->remember("postsByClass_{$classId}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($classId) {
+        return Post::where('class_id', $classId)->paginate(6);
+    });
 
-        // Return the posts as a JSON response
-        return PostResource::collection($posts);
-    }
+    $posts->load('videos', 'pictures', 'poll', 'attachments');
 
+    // Return the posts as a JSON response
+    return PostResource::collection($posts);
+}
+
+public function postsBySchool(Request $request, $schoolId)
+{
+    $pageNumber = $request->get('page', 1);
+    $lastPost = Post::where('school_id', $schoolId)->latest()->first();
+    $lastPostUpdate = $lastPost ? $lastPost->updated_at : now();
+
+    $posts = Cache::tags(['posts'])->remember("postsBySchool_{$schoolId}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($schoolId) {
+        return Post::where('school_id', $schoolId)->paginate(6);
+    });
+
+    $posts->load('videos', 'pictures', 'poll', 'attachments');
+
+    // Return the posts as a JSON response
+    return PostResource::collection($posts);
+}
     // posts from all user classes
     public function postsByUserClasses(Request $request)
     {
+        $pageNumber = $request->get('page', 1);
+
         // Retrieve the classes the user is in
         $userClasses = $request->user()->classes;
 
@@ -271,7 +307,8 @@ class PostController extends Controller
 
         $userId = $request->user()->id;
 
-        $posts = Cache::remember("postsByUserClasses_{$userId}", 60, function () use ($request) {
+
+        $posts = Cache::tags(['posts'])->remember("postsByUserClasses_{$userId}_page_{$pageNumber}", 60, function () use ($request) {
             $userClasses = $request->user()->classes;
             return Post::whereIn('class_id', $userClasses->pluck('id'))->paginate(6);
         });
@@ -281,30 +318,13 @@ class PostController extends Controller
         // Return the posts as a JSON response
         return PostResource::collection($posts);
     }
-    //posts posted by specific school
-    public function postsBySchool(Request $request, $schoolId)
-    {
-        $posts = Cache::remember("postsBySchool_{$schoolId}", 60, function () use ($request, $schoolId) {
-            $user = $request->user();
-            $school = School::findOrFail($schoolId);
-            if (!$user->schools->contains($school)) {
-                return response()->json(['error' => 'User is not part of this school.'], 403);
-            }
-            return $school->posts()->paginate(6);
-        });
-        // Eager load the relationships
-        $posts->load('videos', 'pictures', 'poll', 'attachments');
-
-        // Return the posts as a JSON response
-        return PostResource::collection($posts);
-    }
-
-//all school posts that admin receives
-    public function postsBySchoolAdmin(Request $request)
+public function postsBySchoolAdmin(Request $request)
 {
+    $pageNumber = $request->get('page', 1);
+
     $adminId = $request->user()->id;
 
-    $posts = Cache::remember("postsBySchoolAdmin_{$adminId}", 60, function () use ($request) {
+    $posts = Cache::tags(['posts'])->remember("postsBySchoolAdmin_{$adminId}_page_{$pageNumber}", 60, function () use ($request) {
         $admin = $request->user();
         if ($admin->role != 'admin') {
             return response()->json(['error' => 'Only admins can view all school posts'], 403);
@@ -313,14 +333,22 @@ class PostController extends Controller
         if (!$school) {
             return response()->json(['error' => 'Admin does not administer any school'], 404);
         }
-        return Post::whereHas('class', function ($query) use ($school) {
+        $postsQuery = Post::whereHas('class', function ($query) use ($school) {
             $query->where('school_id', $school->id);
-        })->paginate(10);
+        });
+
+        if ($postsQuery->exists()) {
+            return $postsQuery->paginate(10);
+        } else {
+            return collect();
+        }
     });
 
-    $posts->load('videos', 'pictures', 'poll', 'attachments');
-
-    return PostResource::collection($posts);
+    if ($posts instanceof \Illuminate\Http\JsonResponse) {
+        return $posts;
+    } else {
+        return PostResource::collection($posts);
+    }
 }
 
     public function toggleSave(Post $post)
@@ -329,13 +357,74 @@ class PostController extends Controller
 
         if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
             $user->savedPosts()->detach($post->id);
+            Cache::tags(['posts'])->flush();
+
             return response()->json(['message' => 'Post unsaved '], 204);
 
         } else {
             $user->savedPosts()->attach($post->id);
+            Cache::tags(['posts'])->flush();
+
             return response()->json(['message' => 'Post saved successfully'], 200);
 
         }
 
     }
+ public function explorePosts(Request $request)
+{
+    $user = $request->user();
+    $pageNumber = $request->get('page', 1);
+
+    $userSchools = $user->schools->pluck('id');
+    $userClasses = $user->classes->pluck('id');
+
+    // Get the latest post update time
+    $lastPostUpdate = Post::where(function ($query) use ($userSchools, $userClasses) {
+        $query->whereIn('school_id', $userSchools)
+              ->orWhereIn('class_id', $userClasses);
+    })->latest()->first()->updated_at ?? now();
+
+    $posts = Cache::tags(['posts'])->remember("explorePosts_user_{$user->id}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($userSchools, $userClasses) {
+        return Post::where(function ($query) use ($userSchools, $userClasses) {
+            $query->whereIn('school_id', $userSchools)
+                  ->orWhereIn('class_id', $userClasses);
+        })->paginate(6);
+    });
+
+    // Eager load the relationships
+    $posts->load('videos', 'pictures', 'poll', 'attachments');
+
+    // Return the posts as a JSON response
+    return PostResource::collection($posts);
+}
+public function postsByAdminSchool(Request $request)
+{
+    $admin = $request->user();
+
+    // Check if the user is an admin
+    if ($admin->role != 'admin') {
+        return response()->json(['error' => 'Only admins can view all school posts'], 403);
+    }
+
+    // Retrieve the school administered by the user
+    $school = School::where('admin_id', $admin->id)->first();
+
+    if (!$school) {
+        return response()->json(['error' => 'Admin does not administer any school'], 404);
+    }
+
+    // Retrieve all posts from the classes of the school and the school itself
+    $posts = Post::where('school_id', $school->id)
+        ->orWhereHas('class', function ($query) use ($school) {
+            $query->where('school_id', $school->id);
+        })->paginate(10);
+
+
+
+    // Eager load the relationships
+//    $posts->load('videos', 'pictures', 'poll', 'attachments');
+
+    // Return the posts as a JSON response
+    return PostResource::collection($posts);
+}
 }

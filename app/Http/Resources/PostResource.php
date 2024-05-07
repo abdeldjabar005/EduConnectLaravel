@@ -28,6 +28,13 @@ class PostResource extends JsonResource
             'isSaved' => $this->savedByUsers->contains(auth()->user()),
         ];
 
+//        if ($this->class_id) {
+//            $data['class_id'] = $this->class_id;
+//            $data['classname'] = $this->class->name;
+//        } else {
+//            $data['school_id'] = $this->school_id;
+//            $data['schoolname'] = $this->school->name;
+//        }
         switch ($this->type) {
             case 'video':
                 $data['video'] = VideoResource::collection($this->videos);

@@ -15,7 +15,10 @@ class Student extends Model
     {
         return $this->belongsToMany(User::class, 'parent_student', 'student_id', 'parent_id');
     }
-
+    public function schools()
+    {
+        return $this->belongsToMany(Student::class, 'school_student', 'student_id', 'school_id');
+    }
     public function classes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(SchoolClass::class, 'class_student', 'student_id', 'class_id');

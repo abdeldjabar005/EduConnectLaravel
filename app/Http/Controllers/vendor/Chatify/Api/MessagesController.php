@@ -64,28 +64,6 @@ class MessagesController extends Controller
     }
 
     /**
-     * This method to make a links for the attachments
-     * to be downloadable.
-     *
-     * @param string $fileName
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function download($fileName)
-    {
-        $path = config('chatify.attachments.folder') . '/' . $fileName;
-        if (Chatify::storage()->exists($path)) {
-            return response()->json([
-                'file_name' => $fileName,
-                'download_path' => Chatify::storage()->url($path)
-            ], 200);
-        } else {
-            return response()->json([
-                'message'=>"Sorry, File does not exist in our server or may have been deleted!"
-            ], 404);
-        }
-    }
-
-    /**
      * Send a message to database
      *
      * @param Request $request
@@ -188,6 +166,28 @@ class MessagesController extends Controller
     }
 
     /**
+     * This method to make a links for the attachments
+     * to be downloadable.
+     *
+     * @param string $fileName
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function download($fileName)
+    {
+        $path = config('chatify.attachments.folder') . '/' . $fileName;
+        if (Chatify::storage()->exists($path)) {
+            return response()->json([
+                'file_name' => $fileName,
+                'download_path' => Chatify::storage()->url($path)
+            ], 200);
+        } else {
+            return response()->json([
+                'message'=>"Sorry, File does not exist in our server or may have been deleted!"
+            ], 404);
+        }
+    }
+
+    /**
      * Make messages as seen
      *
      * @param Request $request
@@ -285,6 +285,7 @@ class MessagesController extends Controller
                     ->paginate($request->per_page ?? $this->perPage);
 
         foreach ($records->items() as $index => $record) {
+
             $record->avatar = Chatify::getUserWithAvatar($record)->avatar;
             $records[$index] = $record;
         }

@@ -12,6 +12,7 @@ class Video extends Model
     protected $fillable = [
         'post_id',
         'url',
+        'name'
     ];
 
     public function post()

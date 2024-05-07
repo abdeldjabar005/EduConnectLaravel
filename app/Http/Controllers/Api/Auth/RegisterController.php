@@ -71,4 +71,29 @@ class RegisterController extends Controller
         return (new UserResource($user))->additional(['token' => $token]);
 
     }
+public function resendOtp(Request $request)
+{
+    $request->validate(['email' => 'required|email']);
+
+    $user = User::where('email', $request->email)->first();
+
+    if ($user && !$user->is_verified) {
+        $otpCode = rand(10000, 99999);
+
+        DB::table('otp')->insert([
+            'user_id' => $user->id,
+            'otp' => $otpCode,
+            'expires_at' => now()->addMinutes(3),
+        ]);
+
+        dispatch(new SendOtpEmail($user->email, $otpCode));
+
+        return response()->json(['message' => 'OTP has been resent to your email.']);
+    }
+
+    if ($user && $user->is_verified) {
+        return response()->json(['message' => 'User is already verified.'], 400);
+    }
+    return response()->json(['error' => 'No user found with this email address.'], 404);
+}
 }
