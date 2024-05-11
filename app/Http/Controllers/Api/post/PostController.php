@@ -260,9 +260,15 @@ public function update(Request $request, Post $post)
 
         // Return a success response
         return $vote ? response()->json(['success' => 'Vote revoked.'], 200) : response()->json(['success' => 'Vote counted.'], 200);
-    }
-public function postsByClass($classId, Request $request)
+    }public function postsByClass($classId, Request $request)
 {
+    $user = $request->user();
+
+    // Check if the user is part of the class
+    if (!$user->classes->contains($classId)) {
+        return response()->json(['error' => 'User is not part of this class'], 403);
+    }
+
     $pageNumber = $request->get('page', 1);
     $lastPost = Post::where('class_id', $classId)->latest()->first();
     $lastPostUpdate = $lastPost ? $lastPost->updated_at : now();
@@ -279,6 +285,13 @@ public function postsByClass($classId, Request $request)
 
 public function postsBySchool(Request $request, $schoolId)
 {
+    $user = $request->user();
+
+    // Check if the user is part of the school
+    if (!$user->schools->contains($schoolId)) {
+        return response()->json(['error' => 'User is not part of this school'], 403);
+    }
+
     $pageNumber = $request->get('page', 1);
     $lastPost = Post::where('school_id', $schoolId)->latest()->first();
     $lastPostUpdate = $lastPost ? $lastPost->updated_at : now();
