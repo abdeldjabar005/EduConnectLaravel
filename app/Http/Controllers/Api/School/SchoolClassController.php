@@ -151,7 +151,7 @@ class SchoolClassController extends Controller
         return response()->json(["response" => "This class has been deleted"], 204);
     }
 
-    public function addStudentToClass(Request $request)
+    public function joinSchoolClass(Request $request)
     {
         $user = $request->user();
 //        $student = Student::findOrFail($studentId);
@@ -174,9 +174,8 @@ class SchoolClassController extends Controller
 //        }
 
         // Check if a join request already exists
-        $existingJoinRequest = JoinRequest::where('student_id', $user->id)
+        $existingJoinRequest = JoinRequest::where('parent_id', $user->id)
             ->where('class_id', $classId)
-            ->where('parent_id', $user->id)
             ->first();
 
         if ($existingJoinRequest) {
@@ -185,7 +184,7 @@ class SchoolClassController extends Controller
 
         // Create a join request
         $joinRequest = new JoinRequest();
-        $joinRequest->student_id = $user->id;
+//        $joinRequest->user_id = $user->id;
         $joinRequest->class_id = $classId;
         $joinRequest->parent_id = $user->id;
         $joinRequest->save();

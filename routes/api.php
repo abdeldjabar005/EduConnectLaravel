@@ -114,7 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('join-requests')->group(function () {
         // Route for parents to send a join request to a class
-        Route::post('/', [SchoolClassController::class, 'addStudentToClass']);
+        Route::post('/', [SchoolClassController::class, 'joinSchoolClass']);
         // Route for teachers to approve a join request
         Route::post('/{joinRequestId}/approve', [SchoolClassController::class, 'approveJoinRequest']);
 
