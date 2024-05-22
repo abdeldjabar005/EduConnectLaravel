@@ -16,6 +16,7 @@ use App\Http\Controllers\QuoteController;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
+//Broadcast::routes(['middleware' => ['auth:sanctum']]);
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -132,8 +133,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('posts')->group(function () {
         Route::get('/', [PostController::class, 'index']);
         Route::post('/', [PostController::class, 'store']);
-        Route::get('/{post}', [PostController::class, 'show']);
-        Route::put('/{post}', [PostController::class, 'update']);
+        Route::get('/{post}', [PostController::class, 'show'])->where('post', '[0-9]+');        Route::put('/{post}', [PostController::class, 'update']);
         Route::delete('/{post}', [PostController::class, 'destroy']);
         Route::post('/vote/{id}', [PostController::class, 'vote']);
         Route::get('/class/{classId}', [PostController::class, 'postsByClass']);
@@ -141,7 +141,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user/posts', [PostController::class, 'explorePosts']);
         //saving post
         Route::post('/{post}/toggle-save', [PostController::class, 'toggleSave']);
-
+        Route::get('/saved-posts', [PostController::class, 'getSavedPosts']);
 
         // Route for getting all posts of each class in a specific school for the admin
         Route::get('/school/admin', [PostController::class, 'postsByAdminSchool']);
@@ -160,6 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/{comment}/like', [CommentLikeController::class, 'store']);
         Route::delete('/{comment}/like', [CommentLikeController::class, 'destroy']);
+        Route::put('/{comment}/like', [CommentLikeController::class, 'update']);
 
         Route::get('/comments/{comment}/replies', [ReplyController::class, 'index']);
         Route::get('/comments/{comment}/replies/{reply}', [ReplyController::class, 'show']);

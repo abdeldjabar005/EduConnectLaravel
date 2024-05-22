@@ -316,7 +316,7 @@ public function getSchoolClasses(Request $request, School $school)
                 $isMember = 1;
             } else {
                 // Check if there is a pending join request from the user to the class
-                $joinRequest = JoinRequest::where('student_id', $user->id)
+                $joinRequest = JoinRequest::where('parent_id', $user->id)
                     ->where('class_id', $class->id)
                     ->first();
                 if ($joinRequest) {

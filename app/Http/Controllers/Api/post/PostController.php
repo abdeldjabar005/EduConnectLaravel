@@ -364,25 +364,42 @@ public function postsBySchoolAdmin(Request $request)
     }
 }
 
-    public function toggleSave(Post $post)
-    {
-        $user = auth()->user();
+  public function toggleSave(Post $post)
+{
+    $user = auth()->user();
 
-        if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
-            $user->savedPosts()->detach($post->id);
-            Cache::tags(['posts'])->flush();
-
-            return response()->json(['message' => 'Post unsaved '], 204);
-
-        } else {
-            $user->savedPosts()->attach($post->id);
-            Cache::tags(['posts'])->flush();
-
-            return response()->json(['message' => 'Post saved successfully'], 200);
-
-        }
-
+    if (!$user->classes->contains($post->class_id) && !$user->schools->contains($post->school_id)) {
+        return response()->json(['error' => 'User is not part of this class or school'], 403);
     }
+
+    if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
+        $user->savedPosts()->detach($post->id);
+        Cache::tags(['posts'])->flush();
+
+        return response()->json(['message' => 'Post unsaved '], 204);
+
+    } else {
+        $user->savedPosts()->attach($post->id);
+        Cache::tags(['posts'])->flush();
+
+        return response()->json(['message' => 'Post saved successfully'], 200);
+    }
+}
+  public function getSavedPosts(Request $request)
+{
+    $user = $request->user();
+    $pageNumber = $request->get('page', 1);
+
+    $lastSavedPostUpdate = $user->savedPosts()->latest()->first()->updated_at ?? now();
+
+    $savedPosts = Cache::tags(['posts'])->remember("savedPosts_user_{$user->id}_{$lastSavedPostUpdate}_page_{$pageNumber}", 60, function () use ($user) {
+        return $user->savedPosts()->paginate(6);
+    });
+
+    $savedPosts->load('videos', 'pictures', 'poll', 'attachments');
+
+    return PostResource::collection($savedPosts);
+}
  public function explorePosts(Request $request)
 {
     $user = $request->user();
@@ -397,7 +414,7 @@ public function postsBySchoolAdmin(Request $request)
               ->orWhereIn('class_id', $userClasses);
     })->latest()->first()->updated_at ?? now();
 
-    $posts = Cache::tags(['posts'])->remember("explorePosts_user_{$user->id}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($userSchools, $userClasses) {
+    $posts =     Cache::tags(['posts'])->remember("explorePosts_user_{$user->id}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($userSchools, $userClasses) {
         return Post::where(function ($query) use ($userSchools, $userClasses) {
             $query->whereIn('school_id', $userSchools)
                   ->orWhereIn('class_id', $userClasses);

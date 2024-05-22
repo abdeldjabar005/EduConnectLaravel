@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\vendor\Chatify\Api;
 
+use App\Http\Resources\Contact;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Response;
@@ -150,21 +152,46 @@ class MessagesController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function fetch(Request $request)
-    {
-        $query = Chatify::fetchMessagesQuery($request['id'])->latest();
-        $messages = $query->paginate($request->per_page ?? $this->perPage);
-        $totalMessages = $messages->total();
-        $lastPage = $messages->lastPage();
-        $response = [
-            'total' => $totalMessages,
-            'last_page' => $lastPage,
-            'last_message_id' => collect($messages->items())->last()->id ?? null,
-            'messages' => $messages->items(),
+public function fetch(Request $request)
+{
+    $query = Chatify::fetchMessagesQuery($request['id'])
+        ->join('users', 'ch_messages.from_id', '=', 'users.id')
+        ->select('ch_messages.*', 'users.id as user_id', 'users.profile_picture', 'users.first_name', 'users.last_name')
+        ->latest();
+
+    $messages = $query->paginate($request->per_page ?? $this->perPage);
+    $totalMessages = $messages->total();
+    $lastPage = $messages->lastPage();
+
+    $messagesData = [];
+    foreach ($messages->items() as $message) {
+        $messageData = [
+            'id' => $message->id,
+            'from_id' => $message->from_id,
+            'toId' => $message->to_id,
+            'body' => $message->body,
+            'attachment' => $message->attachment,
+            'seen' => $message->seen,
+            'created_at' => $message->created_at,
+            'updated_at' => $message->updated_at,
+            'user' => [
+                'id' => $message->user_id,
+                'profileImage' => $message->profile_picture,
+                'firstName' => $message->first_name,
+                'lastName' => $message->last_name,
+            ],
         ];
-        return Response::json($response);
+        $messagesData[] = $messageData;
     }
 
+    $response = [
+        'total' => $totalMessages,
+        'last_page' => $lastPage,
+        'last_message_id' => collect($messages->items())->last()->id ?? null,
+        'messages' => $messagesData,
+    ];
+    return Response::json($response);
+}
     /**
      * This method to make a links for the attachments
      * to be downloadable.
@@ -225,9 +252,10 @@ class MessagesController extends Controller
         ->orderBy('max_created_at', 'desc')
         ->groupBy('users.id')
         ->paginate($request->per_page ?? $this->perPage);
+        $usersResource = Contact::collection($users);
 
         return response()->json([
-            'contacts' => $users->items(),
+            'contacts' => $usersResource,
             'total' => $users->total() ?? 0,
             'last_page' => $users->lastPage() ?? 1,
         ], 200);
