@@ -17,12 +17,12 @@ class SchoolClass extends Model
         'subject',
         'teacher_id',
         'school_id',
-        'code',
+
         'image'
     ];
     protected $casts = [
         'id' => 'integer',
-        'school_id' => 'integer', 
+        'school_id' => 'integer',
     ];
     public function teacher()
     {
@@ -44,5 +44,9 @@ class SchoolClass extends Model
     public function joinRequests()
     {
         return $this->hasMany(JoinRequest::class, 'class_id');
+    }
+    public function inviteCodes()
+    {
+        return $this->hasMany(ClassInviteCode::class, 'class_id');
     }
 }

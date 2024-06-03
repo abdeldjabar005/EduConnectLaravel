@@ -9,6 +9,7 @@ use App\Http\Resources\SchoolResource;
 use App\Models\JoinRequest;
 use App\Models\School;
 use App\Models\SchoolClass;
+use App\Models\SchoolInviteCode;
 use App\Models\SchoolJoinRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -37,7 +38,6 @@ class SchoolController extends Controller
     }
     $data = $request->only('name', 'address');
     $data['admin_id'] = $user->id;
-    $data['code'] = Str::random(10);
     $data['verified'] = false;
     $data['verification_request_sent'] = false;
     if ($request->hasFile('image')) {
@@ -228,14 +228,20 @@ public function viewSchoolJoinRequestsForOneSchool(Request $request, $schoolId)
 
     return response()->json(['message' => 'Join request rejected successfully']);
 }
-   public function joinSchoolUsingCode(Request $request)
+ public function joinSchoolUsingCode(Request $request)
 {
     $code = $request->input('code');
-    $school = School::where('code', $code)->first();
 
-    if (!$school) {
-        return response()->json(['message' => 'Invalid code'], 404);
+    // Find the invite code in the SchoolInviteCode table
+    $inviteCode = SchoolInviteCode::where('code', $code)->first();
+
+    // If the invite code does not exist or has been used, return an error
+    if (!$inviteCode) {
+        return response()->json(['message' => 'Invalid or used code'], 400);
     }
+
+    // Get the school associated with the invite code
+    $school = $inviteCode->school;
 
     $user = $request->user();
 
@@ -246,7 +252,35 @@ public function viewSchoolJoinRequestsForOneSchool(Request $request, $schoolId)
 
     $user->schools()->attach($school->id);
 
+    // Delete the invite code
+    $inviteCode->delete();
+
     return response()->json(new SchoolResource($school));
+}
+ public function generateInviteCode(Request $request, School $school)
+{
+    $user = $request->user();
+
+    if ($user->id !== $school->admin_id) {
+        return response()->json(['error' => 'Only the school admin can generate invite codes'], 403);
+    }
+
+    $numCodes = $request->input('number', 1);
+
+    $codes = [];
+
+    for ($i = 0; $i < $numCodes; $i++) {
+        $code = Str::random(10);
+
+        $inviteCode = new SchoolInviteCode();
+        $inviteCode->school_id = $school->id;
+        $inviteCode->code = $code;
+        $inviteCode->save();
+
+        $codes[] = $code;
+    }
+
+    return response()->json(['codes' => $codes]);
 }
 public function leaveSchool(Request $request, School $school)
 {
@@ -493,4 +527,7 @@ public function getSchoolStudentsWithParents(Request $request, School $school)
 
     return response()->json($students);
 }
+
+
+
 }

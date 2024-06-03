@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\School;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SchoolClassRequest;
 use App\Http\Resources\SchoolClassResource;
+use App\Models\ClassInviteCode;
 use App\Models\JoinRequest;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -306,23 +307,49 @@ public function viewClassJoinRequests(Request $request, $classId)
 
     return response()->json($joinRequests);
 }
+public function generateInviteCode(Request $request, SchoolClass $class)
+{
+    $user = $request->user();
+
+    if ($user->id !== $class->teacher_id) {
+        return response()->json(['error' => 'Only the teacher can generate invite codes'], 403);
+    }
+
+    $numCodes = $request->input('number', 1);
+
+    $codes = [];
+
+    for ($i = 0; $i < $numCodes; $i++) {
+        $code = Str::random(10);
+
+        $inviteCode = new ClassInviteCode();
+        $inviteCode->class_id = $class->id;
+        $inviteCode->code = $code;
+        $inviteCode->save();
+
+        $codes[] = $code;
+    }
+
+    return response()->json(['codes' => $codes]);
+}
     public function joinClassUsingCode(Request $request)
 {
     $code = $request->input('code');
-    $class = SchoolClass::where('code', $code)->first();
 
-    if (!$class) {
-        return response()->json(['message' => 'Invalid code'], 404);
+    $inviteCode = ClassInviteCode::where('code', $code)->first();
+
+    if (!$inviteCode) {
+        return response()->json(['message' => 'Invalid or used code'], 400);
     }
+    $class = $inviteCode->class;
 
     $user = $request->user();
-
-    // Check if the user is already joined to the class
     if ($user->classes()->where('classes.id', $class->id)->exists()) {
         return response()->json(['message' => 'You have already joined this class'], 409);
     }
 
     $user->classes()->attach($class->id);
+    $inviteCode->delete();
 
     return response()->json(new SchoolClassResource($class));
 }

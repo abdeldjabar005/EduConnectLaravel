@@ -24,7 +24,6 @@ class SchoolResource extends JsonResource
             'admin_id' => $this->admin_id,
             'admin_first_name' => $this->admin->first_name,
             'admin_last_name' => $this->admin->last_name,
-            'code' => $this->code,
             'members_count' => $this->users->count(),
         ];
     }

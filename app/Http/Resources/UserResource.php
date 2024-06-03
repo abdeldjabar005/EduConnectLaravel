@@ -21,7 +21,7 @@ class UserResource extends JsonResource
         'email' => $this->email,
         'is_verified' => $this->is_verified,
         'role' => $this->role,
-        'profile_picture' => $this->profile_picture,
+        'profile_picture' => $this->profile_picture ?? 'users-avatar/avatar.png',
         'bio' => $this->bio,
         'contact_information' => $this->contact_information,
         'schools' => SchoolResource::collection($this->schools) ,

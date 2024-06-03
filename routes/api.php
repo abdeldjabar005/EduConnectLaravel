@@ -44,8 +44,9 @@ Route::middleware([
 // ->middleware('verified') will use it later to check if the user is verified
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::put('/user/{user}', [ProfileController::class, 'update']);
-
+    Route::put('/user', [ProfileController::class, 'update']);
+    Route::post('/change-password', [LoginController::class, 'changePassword']);
+    Route::put('/profile-picture', [ProfileController::class, 'updateProfilePicture']);
    // Route::apiResource('schools', SchoolController::class);
     Route::prefix('schools')->group(function () {
         Route::get('/', [SchoolController::class, 'index']);
@@ -53,6 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{school}', [SchoolController::class, 'show']);
         Route::put('/{school}', [SchoolController::class, 'update']);
         Route::delete('/{school}', [SchoolController::class, 'destroy']);
+        Route::post('/{school}/generate-code', [SchoolController::class, 'generateInviteCode']);
         Route::post('/join', [SchoolController::class, 'joinSchool']);
         Route::post('/{school}/leave', [SchoolController::class, 'leaveSchool']);
         Route::get('/{school}/members', [SchoolController::class, 'getSchoolMembers']);
@@ -82,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Route for admins to reject a join request
         Route::post('/{schoolJoinRequest}/reject', [SchoolController::class, 'rejectSchoolJoinRequest']);
         Route::post('/join-school', [SchoolController::class, 'joinSchoolUsingCode']);
+
     });
 
     Route::prefix('classes')->group(function () {
@@ -93,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/student/{studentId}', [SchoolClassController::class, 'classesForStudent']);
         Route::put('/{id}', [SchoolClassController::class, 'update']);
         Route::delete('/{id}', [SchoolClassController::class, 'destroy']);
+        Route::post('/{class}/generate-code', [SchoolClassController::class, 'generateInviteCode']);
         Route::get('/{class}/members', [SchoolClassController::class, 'getClassMembers']);
         Route::post('/{class}/associate', [SchoolClassController::class, 'associateStudentWithClass']);
         Route::get('/{class}/students', [SchoolClassController::class, 'getClassStudentsWithParents']);

@@ -51,5 +51,9 @@ class School extends Model
         return $this->hasMany(Post::class);
     }
 
+    public function inviteCodes()
+    {
+        return $this->hasMany(SchoolInviteCode::class);
+    }
 
 }

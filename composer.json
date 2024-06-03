@@ -16,7 +16,8 @@
         "mailersend/laravel-driver": "^2.3",
         "munafio/chatify": "^1.6",
         "predis/predis": "^2.2",
-        "pusher/pusher-php-server": "^7.2"
+        "pusher/pusher-php-server": "^7.2",
+        "tymon/jwt-auth": "^2.1"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.15",
