@@ -1,0 +1,198 @@
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F5F5F5;
+}
+
+.admin-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background-color: #fff;
+    padding: 10px;
+    color: #000;
+}
+
+.admin-info-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+.school {
+    margin: 0;
+
+    padding-bottom: 30px;
+
+}
+.container {
+    width: 90%;
+    background-color: #fff;
+    padding: 40px;
+    margin: 20px;
+    border-radius: 5px;
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+}
+.admin-info img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.admin-info a {
+    background-color: red;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+.shortcut-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background-color: #666;
+    padding: 10px;
+    color: #fff;
+}
+.admin-info span {
+    margin-right: 10px;
+}
+
+.school-requests {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.school-requests thead tr {
+    background-color: #009879;
+    color: #000000;
+    text-align: left;
+}
+
+.school-requests th, .school-requests td {
+    padding: 12px 15px;
+}
+
+.school-requests tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+.school-requests tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+/*.school-requests tbody tr:last-of-type {*/
+/*    border-bottom: 2px solid #009879;*/
+/*}*/
+
+/*.school-requests tbody tr.active-row {*/
+/*    font-weight: bold;*/
+/*    color: #009879;*/
+/*}*/
+
+button {
+    display: inline-block;
+    margin-right: 10px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+form {
+    display: inline-block; /* Add this line */
+    margin-right: 10px; /* Add this line for space between forms */
+}
+.button-container {
+    display: flex;
+    justify-content: center;
+}
+button.verify {
+    background-color: #4CAF50; /* Green */
+    color: white;
+}
+
+button.verify:hover {
+    background-color: #45a049;
+}
+
+button.reject {
+    background-color: #f44336; /* Red */
+    color: white;
+}
+
+button.reject:hover {
+    background-color: #da190b;
+}
+.school-requests th {
+    background-color: #f2f2f2;
+}
+.actions-header {
+    text-align: center;
+}
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-toggle:after {
+    content: "\25BC";
+    position: absolute;
+    right: -15px;
+    top: 50%;
+}
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #fff;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-menu a {
+    background-color: #fff;
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown-menu a:hover {
+    box-shadow: 0px 2px 5px 0px rgba(0,0,0,0.2);
+}
+
+.dropdown-menu a:last-child {
+    border-top: 1px solid #ddd;
+}
+.parent-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stats-container {
+    display: flex;
+    justify-content: space-around;
+    width: 90%;
+    margin-bottom: 10px;
+}
+.icon {
+    font-size: 23px;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 10px;
+    margin: 10px;
+    border-radius: 20px;
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+    text-align: center;
+    width: 15%;
+    height: 100px;
+}

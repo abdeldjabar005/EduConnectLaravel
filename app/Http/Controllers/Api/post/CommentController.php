@@ -54,19 +54,19 @@ class CommentController extends Controller
         return response()->json($comment, 200);
     }
 
-    public function destroy($id)
-    {
-        $comment = Comment::findOrFail($id);
+   public function destroy($postId, $commentId)
+{
+    $comment = Comment::where('post_id', $postId)->findOrFail($commentId);
 
-        // Check if the authenticated user is the owner of the comment or an admin && !auth()->user()->isAdmin()
-        if (auth()->id() !== $comment->user_id ) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $comment->delete();
-
-        return response()->json(null, 204);
+    // Check if the authenticated user is the owner of the comment or an admin
+    if (auth()->id() !== $comment->user_id ) {
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
+
+    $comment->delete();
+
+    return response()->json(null, 204);
+}
 
     public function comments($postId)
     {

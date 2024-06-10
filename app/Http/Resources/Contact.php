@@ -21,6 +21,9 @@ class Contact extends JsonResource
             'email' => $this->email,
             'profile_picture' => $this->profile_picture,
              'active_status' => $this->active_status,
+            'last_message' => $this->last_message,
+            'last_message_updated_at' => $this->last_message_updated_at,
+
         ];
 
         return $data;

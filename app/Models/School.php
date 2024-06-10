@@ -37,9 +37,9 @@ class School extends Model
         return $this->hasMany(User::class, 'school_id')->where('role', 'teacher');
     }
 
-    public function students()
+public function students()
 {
-    return $this->belongsToMany(Student::class, 'school_student');
+    return $this->hasMany(Student::class);
 }
     public function classes()
     {
@@ -54,6 +54,11 @@ class School extends Model
     public function inviteCodes()
     {
         return $this->hasMany(SchoolInviteCode::class);
+    }
+
+    public function verificationRequests()
+    {
+        return $this->hasMany(SchoolVerificationRequest::class);
     }
 
 }

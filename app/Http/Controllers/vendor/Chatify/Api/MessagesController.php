@@ -236,31 +236,39 @@ public function fetch(Request $request)
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse response
      */
-    public function getContacts(Request $request)
-    {
-        // get all users that received/sent message from/to [Auth user]
-        $users = Message::join('users',  function ($join) {
-            $join->on('ch_messages.from_id', '=', 'users.id')
-                ->orOn('ch_messages.to_id', '=', 'users.id');
-        })
-        ->where(function ($q) {
-            $q->where('ch_messages.from_id', Auth::user()->id)
-            ->orWhere('ch_messages.to_id', Auth::user()->id);
-        })
-        ->where('users.id','!=',Auth::user()->id)
-        ->select('users.*',DB::raw('MAX(ch_messages.created_at) max_created_at'))
-        ->orderBy('max_created_at', 'desc')
-        ->groupBy('users.id')
-        ->paginate($request->per_page ?? $this->perPage);
-        $usersResource = Contact::collection($users);
+ public function getContacts(Request $request)
+{
+    // Subquery to get the latest message for each user
+    $sub = Message::select('ch_messages.from_id', 'ch_messages.to_id', DB::raw('MAX(ch_messages.body) as body'), DB::raw('MAX(ch_messages.updated_at) as updated_at'))
+        ->groupBy('ch_messages.from_id', 'ch_messages.to_id');
 
-        return response()->json([
-            'contacts' => $usersResource,
-            'total' => $users->total() ?? 0,
-            'last_page' => $users->lastPage() ?? 1,
-        ], 200);
-    }
+    // Main query
+    $users = Message::join('users',  function ($join) {
+        $join->on('ch_messages.from_id', '=', 'users.id')
+            ->orOn('ch_messages.to_id', '=', 'users.id');
+    })
+    ->joinSub($sub, 'latest_message', function ($join) {
+        $join->on('users.id', '=', 'latest_message.from_id')
+            ->orOn('users.id', '=', 'latest_message.to_id');
+    })
+    ->where(function ($q) {
+        $q->where('ch_messages.from_id', Auth::user()->id)
+        ->orWhere('ch_messages.to_id', Auth::user()->id);
+    })
+    ->where('users.id','!=',Auth::user()->id)
+    ->select('users.*', 'latest_message.body as last_message', 'latest_message.updated_at as last_message_updated_at')
+    ->orderBy('latest_message.updated_at', 'desc')
+    ->groupBy('users.id', 'latest_message.body', 'latest_message.updated_at')
+    ->paginate($request->per_page ?? $this->perPage);
 
+    $usersResource = Contact::collection($users);
+
+    return response()->json([
+        'contacts' => $usersResource,
+        'total' => $users->total() ?? 0,
+        'last_page' => $users->lastPage() ?? 1,
+    ], 200);
+}
     /**
      * Put a user in the favorites list
      *

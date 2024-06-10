@@ -220,31 +220,24 @@ public function update(Request $request, Post $post)
 
     public function vote(Request $request, $id)
     {
-        // Validate the request
         $request->validate([
             'option' => 'required|string',
         ]);
 
-        // Retrieve the poll
         $poll = Poll::findOrFail($id);
 
-        // Decode the results array
         $results = json_decode($poll->results, true);
 
-        // Check if the option exists
         if (!array_key_exists($request->option, $results)) {
             return response()->json(['error' => 'Invalid option.'], 400);
         }
 
-        // Check if the user has already voted
         $vote = Vote::where('user_id', auth()->id())->where('poll_id', $poll->id)->first();
 
         if ($vote) {
-            // If the user has already voted, remove the vote
             $results[$vote->option]--;
             $vote->delete();
         } else {
-            // If the user hasn't voted, add the vote
             $results[$request->option]++;
             Vote::create([
                 'user_id' => auth()->id(),
@@ -254,17 +247,18 @@ public function update(Request $request, Post $post)
         }
         Cache::tags(['posts'])->flush();
 
-        // Encode the results array and save it back to the database
         $poll->results = json_encode($results);
         $poll->save();
+        $post = $poll->post;
 
-        // Return a success response
-        return $vote ? response()->json(['success' => 'Vote revoked.'], 200) : response()->json(['success' => 'Vote counted.'], 200);
+        $post->load('videos', 'pictures', 'poll', 'attachments');
+
+        return new PostResource($post);
+//        return $vote ? response()->json(['success' => 'Vote revoked.'], 200) : response()->json(['success' => 'Vote counted.'], 200);
     }public function postsByClass($classId, Request $request)
 {
     $user = $request->user();
 
-    // Check if the user is part of the class
     if (!$user->classes->contains($classId)) {
         return response()->json(['error' => 'User is not part of this class'], 403);
     }
@@ -279,7 +273,6 @@ public function update(Request $request, Post $post)
 
     $posts->load('videos', 'pictures', 'poll', 'attachments');
 
-    // Return the posts as a JSON response
     return PostResource::collection($posts);
 }
 
@@ -287,7 +280,6 @@ public function postsBySchool(Request $request, $schoolId)
 {
     $user = $request->user();
 
-    // Check if the user is part of the school
     if (!$user->schools->contains($schoolId)) {
         return response()->json(['error' => 'User is not part of this school'], 403);
     }
@@ -302,18 +294,14 @@ public function postsBySchool(Request $request, $schoolId)
 
     $posts->load('videos', 'pictures', 'poll', 'attachments');
 
-    // Return the posts as a JSON response
     return PostResource::collection($posts);
 }
-    // posts from all user classes
     public function postsByUserClasses(Request $request)
     {
         $pageNumber = $request->get('page', 1);
 
-        // Retrieve the classes the user is in
         $userClasses = $request->user()->classes;
 
-        // Check if the user has classes
         if ($userClasses === null) {
             return response()->json(['error' => 'User has no classes.'], 400);
         }
@@ -325,12 +313,30 @@ public function postsBySchool(Request $request, $schoolId)
             $userClasses = $request->user()->classes;
             return Post::whereIn('class_id', $userClasses->pluck('id'))->paginate(6);
         });
-        // Eager load the relationships
         $posts->load('videos', 'pictures', 'poll', 'attachments');
-
-        // Return the posts as a JSON response
         return PostResource::collection($posts);
     }
+    public function postsByUserSchools(Request $request)
+{
+    $pageNumber = $request->get('page', 1);
+
+    $userSchools = $request->user()->schools;
+
+    if ($userSchools === null) {
+        return response()->json(['error' => 'User has no schools.'], 400);
+    }
+
+    $userId = $request->user()->id;
+
+    $posts = Cache::tags(['posts'])->remember("postsByUserSchools_{$userId}_page_{$pageNumber}", 60, function () use ($request) {
+        $userSchools = $request->user()->schools;
+        return Post::whereIn('school_id', $userSchools->pluck('id'))->paginate(6);
+    });
+
+    $posts->load('videos', 'pictures', 'poll', 'attachments');
+
+    return PostResource::collection($posts);
+}
 public function postsBySchoolAdmin(Request $request)
 {
     $pageNumber = $request->get('page', 1);
@@ -399,8 +405,7 @@ public function postsBySchoolAdmin(Request $request)
     $savedPosts->load('videos', 'pictures', 'poll', 'attachments');
 
     return PostResource::collection($savedPosts);
-}
- public function explorePosts(Request $request)
+}public function explorePosts(Request $request)
 {
     $user = $request->user();
     $pageNumber = $request->get('page', 1);
@@ -408,53 +413,44 @@ public function postsBySchoolAdmin(Request $request)
     $userSchools = $user->schools->pluck('id');
     $userClasses = $user->classes->pluck('id');
 
-    // Get the latest post update time
     $lastPostUpdate = Post::where(function ($query) use ($userSchools, $userClasses) {
         $query->whereIn('school_id', $userSchools)
               ->orWhereIn('class_id', $userClasses);
     })->latest()->first()->updated_at ?? now();
 
-    $posts =     Cache::tags(['posts'])->remember("explorePosts_user_{$user->id}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($userSchools, $userClasses) {
+    $posts = Cache::tags(['posts'])->remember("explorePosts_user_{$user->id}_{$lastPostUpdate}_page_{$pageNumber}", 60, function () use ($userSchools, $userClasses) {
         return Post::where(function ($query) use ($userSchools, $userClasses) {
             $query->whereIn('school_id', $userSchools)
                   ->orWhereIn('class_id', $userClasses);
-        })->paginate(6);
+        })->orderBy('created_at', 'desc')->paginate(6);
     });
 
-    // Eager load the relationships
     $posts->load('videos', 'pictures', 'poll', 'attachments');
 
-    // Return the posts as a JSON response
     return PostResource::collection($posts);
 }
 public function postsByAdminSchool(Request $request)
 {
     $admin = $request->user();
 
-    // Check if the user is an admin
     if ($admin->role != 'admin') {
         return response()->json(['error' => 'Only admins can view all school posts'], 403);
     }
 
-    // Retrieve the school administered by the user
     $school = School::where('admin_id', $admin->id)->first();
 
     if (!$school) {
         return response()->json(['error' => 'Admin does not administer any school'], 404);
     }
 
-    // Retrieve all posts from the classes of the school and the school itself
     $posts = Post::where('school_id', $school->id)
         ->orWhereHas('class', function ($query) use ($school) {
             $query->where('school_id', $school->id);
         })->paginate(10);
 
-
-
     // Eager load the relationships
 //    $posts->load('videos', 'pictures', 'poll', 'attachments');
 
-    // Return the posts as a JSON response
     return PostResource::collection($posts);
 }
 }

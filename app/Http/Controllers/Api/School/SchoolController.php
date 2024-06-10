@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SchoolRequest;
 use App\Http\Resources\SchoolClassResource;
 use App\Http\Resources\SchoolResource;
+use App\Http\Resources\SearchResource;
 use App\Models\JoinRequest;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolInviteCode;
 use App\Models\SchoolJoinRequest;
+use App\Models\SchoolVerificationRequest;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Str;
@@ -310,7 +313,7 @@ public function getSchoolMembers(School $school)
     $members = Cache::remember('school.members.' . $school->id, 60, function () use ($school) {
         return $school->users->map(function ($user) use ($school) {
             $children = $user->students->filter(function ($student) use ($school) {
-                return $student->schools->contains($school->id);
+                return $student->school;
             })->map(function ($student) {
                 return [
                     'id' => $student->id,
@@ -413,6 +416,7 @@ public function sendVerificationRequest(Request $request, School $school)
     if ($user->id !== $school->admin_id) {
         return response()->json(['error' => 'Only the admin can send a verification request'], 403);
     }
+
     // Check if a verification request has already been sent
     if ($school->verification_request_sent) {
         return response()->json(['error' => 'A verification request has already been sent for this school'], 403);
@@ -426,26 +430,33 @@ public function sendVerificationRequest(Request $request, School $school)
     $request->validate([
         'email' => 'required|email',
         'phone_number' => 'required',
-        'document' => 'required|file|mimes:pdf,doc,docx' // adjust this as needed
+        'document' => 'required|file|mimes:pdf,doc,docx'
     ]);
 
     // Store the document
     $documentPath = $document->store('documents', 'public');
 
+    // Store the verification request in the database
+    $verificationRequest = new SchoolVerificationRequest();
+    $verificationRequest->school_id = $school->id;
+    $verificationRequest->email = $email;
+    $verificationRequest->phone_number = $phoneNumber;
+    $verificationRequest->document_path = $documentPath;
+    $verificationRequest->save();
+
     // Send the email
-    Mail::raw("EduConnect Verification request for school : {$school->name}\nEmail: {$email}\nPhone Number: {$phoneNumber}\n with the id: {$school->id}", function ($message) use ($documentPath, $document) {
-        $message->to('abdeldjabar05@gmail.com')
-              ->subject('School Verification Request')
-              ->attach(storage_path('app/public/'.$documentPath), [
-                  'as' => $document->getClientOriginalName(),
-                  'mime' => $document->getClientMimeType(),
-              ]);
-    });
+//    Mail::raw("EduConnect Verification request for school : {$school->name}\nEmail: {$email}\nPhone Number: {$phoneNumber}\n with the id: {$school->id}", function ($message) use ($documentPath, $document) {
+//        $message->to('abdeldjabar05@gmail.com')
+//              ->subject('School Verification Request')
+//              ->attach(storage_path('app/public/'.$documentPath), [
+//                  'as' => $document->getClientOriginalName(),
+//                  'mime' => $document->getClientMimeType(),
+//              ]);
+//    });
     $school->verification_request_sent = true;
     $school->save();
 
     return response()->json(new SchoolResource($school));
-
 }
 public function getSchoolsWithVerificationRequest(Request $request)
 {
@@ -455,8 +466,7 @@ public function getSchoolsWithVerificationRequest(Request $request)
         return response()->json(['error' => 'Only support can view schools with verification requests'], 403);
     }
 
-    $schools = School::where('verification_request_sent', true)->get();
-
+    $schools = School::whereHas('verificationRequests')->with('verificationRequests')->get();
     return SchoolResource::collection($schools);
 }
 public function verifySchool(Request $request, School $school)
@@ -486,11 +496,14 @@ public function associateStudentWithSchool(Request $request, School $school)
         return response()->json(['error' => 'The student is not a relative of the parent'], 403);
     }
 
-    if ($school->students()->where('students.id', $studentId)->exists()) {
-        return response()->json(['error' => 'The student is already part of this school'], 403);
+    $student = Student::find($studentId);
+    if ($student->school_id) {
+        return response()->json(['error' => 'The student is already part of a school'], 403);
     }
 
-    $school->students()->attach($studentId);
+    $student->school()->associate($school);
+    $student->save();
+
     Cache::forget('school.members.' . $school->id);
     Cache::forget('school.students.' . $school->id);
 
@@ -527,7 +540,18 @@ public function getSchoolStudentsWithParents(Request $request, School $school)
 
     return response()->json($students);
 }
+public function search(Request $request)
+{
+    $searchTerm = $request->query('search');
 
+    $perPage = 10;
 
+    $schools = School::where('name', 'like', '%' . $searchTerm . '%')
+        ->where('verified', true)
+        ->paginate($perPage);
+
+    // Return the schools as a JSON response
+    return response()->json(SearchResource::collection($schools));
+}
 
 }

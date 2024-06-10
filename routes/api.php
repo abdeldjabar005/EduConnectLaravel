@@ -51,6 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('schools')->group(function () {
         Route::get('/', [SchoolController::class, 'index']);
         Route::post('/', [SchoolController::class, 'store']);
+        Route::get('/search', [SchoolController::class, 'search']);
+
         Route::get('/{school}', [SchoolController::class, 'show']);
         Route::put('/{school}', [SchoolController::class, 'update']);
         Route::delete('/{school}', [SchoolController::class, 'destroy']);
@@ -142,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/vote/{id}', [PostController::class, 'vote']);
         Route::get('/class/{classId}', [PostController::class, 'postsByClass']);
         Route::get('/user/classes', [PostController::class, 'postsByUserClasses']);
+        Route::get('/user/schools', [PostController::class, 'postsByUserSchools']);
         Route::get('/user/posts', [PostController::class, 'explorePosts']);
         //saving post
         Route::post('/{post}/toggle-save', [PostController::class, 'toggleSave']);
@@ -154,7 +157,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/school/{schoolId}', [PostController::class, 'postsBySchool']);
 
         Route::ApiResource('/{post}/comments', CommentController::class);
+        Route::delete('/{post}/comments/{comment}', [CommentController::class, 'destroy']);
         Route::get('/{comment}/comment', [CommentController::class, 'comment']);
+
         // /api/posts/{post}/comments/{comment}
         Route::get('/{post}/all-comments', [CommentController::class, 'comments']);
 

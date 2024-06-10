@@ -117,6 +117,9 @@ public function classesForStudent(string $studentId)
         return response()->json(['error' => 'Only the parent can delete the student'], 403);
     }
 
+    // Detach the student from all classes before deleting
+    $student->classes()->detach();
+
     $student->parents()->detach();
     $student->delete();
 

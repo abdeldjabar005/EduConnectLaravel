@@ -36,19 +36,34 @@ class LoginController extends Controller
         return (new UserResource($user))->additional(['token' => $token]);
 
     }
-    public function loginweb(Request $request)
-    {
-        $credentials = $request->only('email', 'password');
+public function loginweb(Request $request)
+{
+    $credentials = $request->only('email', 'password');
 
-        if (Auth::attempt($credentials)) {
-            // Authentication passed...
-            return redirect()->intended('/chatify');
-        }
-
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ]);
+    if (Auth::attempt($credentials)) {
+        // Return a JSON response with a success property
+        return response()->json(['success' => true]);
     }
+
+    // Return a JSON response with an error message
+    return response()->json(['message' => 'Wrong credentials.'], 401);
+}
+public function logout(Request $request)
+{
+    // Check if the user has a current token
+    if ($request->user()->currentAccessToken()) {
+        // Revoke the user's current token
+        $request->user()->currentAccessToken()->delete();
+    }
+
+    Auth::logout();
+
+    $request->session()->invalidate();
+
+    $request->session()->regenerateToken();
+
+    return redirect('/login');
+}
 
 
 public function forgotPassword(Request $request)
@@ -129,4 +144,5 @@ public function changePassword(Request $request)
 
     return response()->json(['message' => 'Password changed successfully.']);
 }
+
 }
