@@ -213,8 +213,14 @@ public function approveJoinRequest(Request $request, string $joinRequestId)
     $joinRequest->delete();
     Cache::forget('school.classes.' . $class->school_id);
 
-    return response()->json(['message' => 'Join request approved successfully']);
-}
+    return [
+        'id' => $joinRequest->id,
+        'name' => $joinRequest->class->name,
+        'first_name' => $joinRequest->parent->first_name,
+        'role' =>'parent',
+        'last_name' => $joinRequest->parent->last_name,
+        'profile_picture' => $joinRequest->parent->profile_picture ?? 'users-avatar/avatar.png',
+    ];}
 
     // Method for teachers to reject a join request
 public function rejectJoinRequest(Request $request, string $joinRequestId)

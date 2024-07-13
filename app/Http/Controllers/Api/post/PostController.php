@@ -405,7 +405,8 @@ public function postsBySchoolAdmin(Request $request)
     $savedPosts->load('videos', 'pictures', 'poll', 'attachments');
 
     return PostResource::collection($savedPosts);
-}public function explorePosts(Request $request)
+}
+public function explorePosts(Request $request)
 {
     $user = $request->user();
     $pageNumber = $request->get('page', 1);
@@ -443,14 +444,18 @@ public function postsByAdminSchool(Request $request)
         return response()->json(['error' => 'Admin does not administer any school'], 404);
     }
 
+    // Retrieve all posts from the classes of the school and the school itself
     $posts = Post::where('school_id', $school->id)
         ->orWhereHas('class', function ($query) use ($school) {
             $query->where('school_id', $school->id);
         })->paginate(10);
 
+
+
     // Eager load the relationships
 //    $posts->load('videos', 'pictures', 'poll', 'attachments');
 
+    // Return the posts as a JSON response
     return PostResource::collection($posts);
 }
 }

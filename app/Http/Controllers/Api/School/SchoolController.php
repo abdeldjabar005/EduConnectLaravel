@@ -207,8 +207,15 @@ public function viewSchoolJoinRequestsForOneSchool(Request $request, $schoolId)
         // Delete the join request
         $joinRequest->delete();
 
-        return response()->json(['message' => 'Join request approved successfully']);
-    }
+        return [
+            'id' => $joinRequest->id,
+            'name' => $joinRequest->school->name,
+            'first_name' => $joinRequest->user->first_name,
+            'role' => 'parent',
+
+            'last_name' => $joinRequest->user->last_name,
+            'profile_picture' => $joinRequest->user->profile_picture ?? 'users-avatar/avatar.png',
+        ];    }
 
     public function rejectSchoolJoinRequest(Request $request, string $joinRequestId)
 {

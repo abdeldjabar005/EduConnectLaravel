@@ -64,20 +64,12 @@ class MessagesController extends Controller
             'user_avatar' => $userAvatar ?? null,
         ]);
     }
-
-    /**
-     * Send a message to database
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function send(Request $request)
     {
         if (!Auth::check()) {
-            // Handle the case where there is no authenticated user
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
-        // default variables
+
         $error = (object)[
             'status' => 0,
             'message' => null
@@ -85,20 +77,15 @@ class MessagesController extends Controller
         $attachment = null;
         $attachment_title = null;
 
-        // if there is attachment [file]
         if ($request->hasFile('file')) {
-            // allowed extensions
             $allowed_images = Chatify::getAllowedImages();
             $allowed_files  = Chatify::getAllowedFiles();
             $allowed        = array_merge($allowed_images, $allowed_files);
 
             $file = $request->file('file');
-            // check file size
             if ($file->getSize() < Chatify::getMaxUploadSize()) {
                 if (in_array(strtolower($file->extension()), $allowed)) {
-                    // get attachment name
                     $attachment_title = $file->getClientOriginalName();
-                    // upload attachment and store the new name
                     $attachment = Str::uuid() . "." . $file->extension();
                     $file->storeAs(config('chatify.attachments.folder'), $attachment, config('chatify.storage_disk_name'));
                 } else {
@@ -112,7 +99,6 @@ class MessagesController extends Controller
         }
 
         if (!$error->status) {
-            // send to database
             $message = Chatify::newMessage([
                 'type' => $request['type'],
                 'from_id' => Auth::user()->id,
@@ -124,20 +110,24 @@ class MessagesController extends Controller
                 ]) : null,
             ]);
 
-            // fetch message to send it with the response
             $messageData = Chatify::parseMessage($message);
 
-            // send to user using pusher
             if (Auth::user()->id != $request['id']) {
                 Chatify::push("private-chatify.".$request['id'], 'messaging', [
                     'from_id' => Auth::user()->id,
                     'to_id' => $request['id'],
                     'message' => $messageData
                 ]);
+
+                // Trigger the client-contactItem event
+                Chatify::push("private-chatify.".$request['id'], 'client-contactItem', [
+                    'from' => Auth::user()->id,
+                    'to' => $request['id'],
+                    'update' => true,
+                ]);
             }
         }
 
-        // send the response
         return Response::json([
             'status' => '200',
             'error' => $error,
@@ -236,29 +226,22 @@ public function fetch(Request $request)
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse response
      */
- public function getContacts(Request $request)
+public function getContacts(Request $request)
 {
     // Subquery to get the latest message for each user
-    $sub = Message::select('ch_messages.from_id', 'ch_messages.to_id', DB::raw('MAX(ch_messages.body) as body'), DB::raw('MAX(ch_messages.updated_at) as updated_at'))
-        ->groupBy('ch_messages.from_id', 'ch_messages.to_id');
-
-    // Main query
-    $users = Message::join('users',  function ($join) {
-        $join->on('ch_messages.from_id', '=', 'users.id')
-            ->orOn('ch_messages.to_id', '=', 'users.id');
-    })
-    ->joinSub($sub, 'latest_message', function ($join) {
-        $join->on('users.id', '=', 'latest_message.from_id')
-            ->orOn('users.id', '=', 'latest_message.to_id');
-    })
+$sub = Message::select(DB::raw('CASE WHEN ch_messages.from_id = '.Auth::user()->id.' THEN ch_messages.to_id ELSE ch_messages.from_id END as user_id'), DB::raw('MAX(ch_messages.body) as body'), DB::raw('MAX(ch_messages.updated_at) as updated_at'))
     ->where(function ($q) {
         $q->where('ch_messages.from_id', Auth::user()->id)
         ->orWhere('ch_messages.to_id', Auth::user()->id);
     })
+    ->groupBy('user_id');
+    // Main query
+    $users = User::joinSub($sub, 'latest_message', function ($join) {
+        $join->on('users.id', '=', 'latest_message.user_id');
+    })
     ->where('users.id','!=',Auth::user()->id)
     ->select('users.*', 'latest_message.body as last_message', 'latest_message.updated_at as last_message_updated_at')
     ->orderBy('latest_message.updated_at', 'desc')
-    ->groupBy('users.id', 'latest_message.body', 'latest_message.updated_at')
     ->paginate($request->per_page ?? $this->perPage);
 
     $usersResource = Contact::collection($users);
